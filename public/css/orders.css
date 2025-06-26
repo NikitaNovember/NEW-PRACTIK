@@ -1,3 +1,114 @@
+
+/* ─── ячейка действий в админ-таблице ─────────────────── */
+/* ─── действия в админ-таблице одним рядом ───────────── */
+.action-cell{
+  display:flex;
+  align-items:center;
+  gap:.6rem;                     /* расстояние между элементами */
+}
+
+/* оба <form> и их содержимое тоже в одну строку */
+.action-cell form{
+  display:flex;
+  align-items:center;
+  gap:.4rem;
+}
+
+/* select фиксированной ширины */
+.action-cell select{
+  width:170px;
+}
+
+/* сбиваем глобальное width:100% */
+.action-cell button{
+  width:auto !important;         /* ← ключевая строка */
+  padding:.4rem .9rem;
+}
+
+/* ─── форма редактирования ETA ─────────────────────── */
+.eta-form{ display:flex; align-items:center; gap:.4rem; }
+.eta-form input{
+  background:#2c2c2b;
+  color:var(--text);
+  border:1px solid var(--text-muted);
+  padding:.3rem .5rem;
+}
+.eta-form button{ width:auto !important; padding:.35rem .7rem; }
+
+
+.action-form select{
+  width:170px;
+  padding:.35rem .55rem;
+  background:#232321;
+  color:var(--text);
+  border:1px solid var(--text-muted);
+  border-radius:3px;
+}
+.action-form select:focus{
+  outline:none;
+  border-color:var(--accent);
+}
+.btn-sec{
+  padding:.4rem .9rem;
+  background:var(--accent);
+  color:#000;
+  border:none;
+  border-radius:4px;
+  cursor:pointer;
+}
+.btn-arch{
+  padding:.4rem .9rem;
+  background:#4f00ff;     /* используемый ранее фиолетовый */
+  color:#fff;
+  border:none;
+  border-radius:4px;
+  cursor:pointer;
+}
+.btn-sec:hover,
+.btn-arch:hover{opacity:.8}
+
+
+
+/* ─── Новая карточка заказа ─────────────────────────── */
+.new-order-page{
+  max-width:500px;
+  margin:0 auto;
+}
+.order-form{
+  background:var(--card);
+  padding:2rem;
+  border-radius:8px;
+  display:flex;
+  flex-direction:column;
+  gap:1.25rem;
+}
+
+/* подпись + инпут в столбик */
+.order-form label{
+  display:flex;
+  flex-direction:column;
+  font-size:.9rem;
+  gap:.35rem;
+}
+
+/* стилизованный инпут */
+.order-form input{
+  padding:.55rem .75rem;
+  background:transparent;
+  border:none;
+  border-bottom:1px solid var(--text-muted);
+  color:var(--text);
+}
+.order-form input:focus{
+  outline:none;
+  border-bottom-color:var(--accent);
+}
+
+/* кнопка отправки */
+.order-form .btn-submit{
+  margin-top:1rem;
+}
+
 /* ───── макет страницы заказов ────────────────────────── */
 .orders-page{
   width:100%;
@@ -8,6 +119,103 @@
   flex-direction:column;
   gap:1.5rem;
 }
+
+.orders-title{
+  text-align:center;
+  margin:0 0 1.5rem;
+}
+
+.orders-controls{
+  display:flex;
+  justify-content:space-between;   /* фильтр ←→ кнопка */
+  align-items:flex-end;
+  flex-wrap:wrap;
+  gap:1rem;
+  margin:2rem 0 .2rem;             /* дистанция до таблицы */
+}
+
+:root{
+  /* добавляем переменную для ссылок на тёмном фоне */
+  --link:#5ea0ff;               /* мягкий голубой, не ядреный #00f */
+}
+
+.orders-table a{
+  color:var(--link);
+  text-decoration:underline;
+}
+.orders-table a:hover{
+  color:#d63131;                /* чуть светлее при наведении */
+}
+
+/* стили чек-листа */
+.status-sort{
+  display:flex;
+  align-items:flex-end;
+  flex-wrap:wrap;
+  gap:.65rem;
+}
+.status-label{
+  font-size:.8rem;
+  color:var(--text-muted);
+}
+.status-sort select{
+  width:180px;
+  padding:.35rem .6rem;
+  background:#181818;              /* чёрная заливка */
+  color:var(--text);            /* белый текст */
+  border:1px solid #292929;
+  border-radius:2px;
+  appearance:none;              /* убираем системный стиль (Chrome/Edge) */
+}
+
+.status-sort select::-ms-expand{display:none}      /* IE */
+.status-sort select::-webkit-scrollbar{width:0}   
+
+.status-sort select option{
+  background:#1f1f1f;
+  color:var(--text);
+}
+
+.status-sort select:focus{
+  outline:none;
+  border-bottom-color:var(--accent);
+}
+
+
+.orders-header{
+  position:relative;
+  margin-bottom:1.75rem;
+  text-align:center;          /* заголовок остаётся по центру */
+}
+
+.orders-header .btn-add{
+  position:absolute;
+  top:370%;
+  right:0;
+  transform:translateY(-50%);
+}
+
+
+.status-field{display:flex;flex-direction:column}
+.status-field label{
+  font-size:.8rem;
+  margin-bottom:.25rem;
+  color:var(--text-muted);
+}
+
+/* стилизуем <select> под скриншот */
+.status-field select{
+  width:180px;
+  padding:.35rem .6rem;
+  background:transparent;
+  border:none;
+  border-bottom:1px solid var(--text-muted);
+  color:var(--text);
+}
+.status-field select:focus{outline:none;border-bottom-color:var(--accent)}
+
+/* ─── таблица чуть ниже сортировки ────────────────────── */
+.table-container{margin-top:1rem}
 
 /* таблица в «скролл-обёртке» для телефонов */
 .table-container{overflow-x:auto}
@@ -52,8 +260,9 @@
 .modal input:focus{outline:none;border-bottom-color:#888}
 .modal button{margin-top:1rem}
 
+
 /* ───── адаптив ───────────────────────────────────────── */
 @media(max-width:600px){
-  .orders-page{padding:.5rem}
-  .page-title{flex-direction:column;align-items:flex-start;gap:.5rem}
+  .orders-controls{flex-direction:column;align-items:stretch}
+  .btn-add{align-self:flex-end}    /* кнопка останется сверху справа */
 }

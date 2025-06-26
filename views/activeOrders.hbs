@@ -8,34 +8,60 @@
 <table class="orders-table">
   <thead>
     <tr>
-      <th>ID</th><th>Товар</th><th>К-во</th><th>Покупатель</th>
-      <th>Статус</th><th>Действие</th>
+      <th>ID</th>
+      <th>Товар</th>
+      <th>К-во</th>
+      <th>Цена ₽</th>
+      <th>Покупатель</th>
+      <th>Создан</th>
+      <th>Ожидается</th>
+      <th>Статус</th>
+      <th>Действие</th>
     </tr>
   </thead>
+
   <tbody>
     {{#each orders}}
       <tr>
         <td>{{id}}</td>
         <td>{{product_name}}</td>
         <td>{{quantity}}</td>
+        <td>{{unit_price}}</td>
         <td>{{customer_name}}</td>
-        <td>{{status}}</td>
+        <td>{{date created_at}}</td>
+
+        <!-- Ожидаемая дата: админ может править -->
         <td>
-          <!-- смена статуса через SELECT -->
-          <form action="/orders/update-status/{{id}}" method="POST" style="display:inline">
+          <form action="/orders/update-eta/{{id}}" method="post" class="eta-form">
+            <input type="date" name="delivery_date"
+                   value="{{delivery_date}}" required>
+            <button class="btn-sec" title="Сохранить дату">→</button>
+          </form>
+        </td>
+
+        <td>{{status}}</td>
+
+        <!-- чек-лист + OK + В архив -->
+        <td class="action-cell">
+
+          <form action="/orders/update-status/{{id}}" method="post" class="action-form">
             <select name="status">
-              <option {{#if (eq status 'На рассмотрении')}}selected{{/if}}>На рассмотрении</option>
-              <option {{#if (eq status 'В обработке')}}selected{{/if}}>В обработке</option>
-              <option {{#if (eq status 'Завершен')}}selected{{/if}}>Завершен</option>
+              <option value="На рассмотрении"   {{#eq status "На рассмотрении"}}selected{{/eq}}>На рассмотрении</option>
+              <option value="Закупаем"          {{#eq status "Закупаем"}}selected{{/eq}}>Закупаем</option>
+              <option value="Ждём поставку"     {{#eq status "Ждём поставку"}}selected{{/eq}}>Ждём поставку</option>
+              <option value="Готов к получению" {{#eq status "Готов к получению"}}selected{{/eq}}>Готов к получению</option>
+              <option value="Пауза"             {{#eq status "Пауза"}}selected{{/eq}}>Пауза</option>
+              <option value="Получено"          {{#eq status "Получено"}}selected{{/eq}}>Получено</option>
+              <option value="Отменено"          {{#eq status "Отменено"}}selected{{/eq}}>Отменено</option>
             </select>
-            <button type="submit">OK</button>
+            <button class="btn-sec">OK</button>
           </form>
 
-          <!-- отправить сразу в архив -->
-          <form action="/orders/update-status/{{id}}" method="POST" style="display:inline">
-            <input type="hidden" name="status" value="Завершен" />
-            <button type="submit" class="btn-arch">В архив</button>
+          <form action="/orders/update-status/{{id}}" method="post">
+            <input type="hidden" name="status" value="Отменено">
+            <button class="btn-arch" title="Поместить в архив">В архив</button>
           </form>
+
         </td>
       </tr>
     {{/each}}

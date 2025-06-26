@@ -22,6 +22,10 @@ export async function updateUserProfile(id, name, phone) {
   await pool.query('UPDATE users SET name = ?, phone = ? WHERE id = ?', [name, phone, id]);
 }
 
+export async function updateOrderETA(id, eta){
+  await pool.query('UPDATE orders SET delivery_date = ? WHERE id = ?', [eta, id]);
+}
+
 export async function insertOrder(o) {
   const sql = `
     INSERT INTO orders

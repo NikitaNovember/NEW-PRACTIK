@@ -1,6 +1,4 @@
 /*public/css/login.css */
-body, html { margin: 0; padding: 0; height: 100%; }
-body { background: #121212; color: #fff; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; align-items: center; justify-content: center; }
 .login-page { width: 100%; max-width: 900px; padding: 20px; }
 .login-content { display: flex; background: #181818; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
 .welcome-section { flex: 1; padding: 60px; background: #1f1f1f; display: flex; flex-direction: column; justify-content: center; }

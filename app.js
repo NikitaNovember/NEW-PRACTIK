@@ -17,7 +17,20 @@ import {
   getArchiveOrders,
   updateOrderStatus,
   getAllUsers,
+  updateOrderETA,
 } from './vendor/db.mjs';
+
+const allowedStatuses = [
+  'На рассмотрении',
+  'Закупаем',
+  'Ждём поставку',
+  'Готов к получению',
+  'Пауза',
+  'Получено',
+  'Отменено'
+];
+
+
 
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
@@ -28,8 +41,14 @@ const hbs = expressHbs.create({
   defaultLayout: 'main',
   layoutsDir: path.join(__dirname, 'views', 'layouts'),
   partialsDir: path.join(__dirname, 'views', 'partials'),
-  helpers: { eq: (a, b) => a == b }
-});
+  helpers : {
+  eq  : (a, b) => a == b,
+  date: iso => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleDateString('ru-RU')        
+            .replace(/\./g, '-')                
+  }}});
 
 const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
@@ -100,11 +119,20 @@ app.get('/logout', (req, res) => req.session.destroy(() => res.redirect('/login'
 
 
 /* заказы – пользователи */
-app.get('/orders/my', isAuth, async (req, res) =>
-  res.render('myOrders', { title: 'Мои заказы',isOrdersPage: true, orders: await getOrdersByUser(req.session.user.id) })
-);
+app.get('/orders/my', isAuth, async (req, res) => {
+  const orders = await getOrdersByUser(req.session.user.id);
 
-app.get('/orders/new', isAuth, (_req, res) => res.render('newOrder', { title: 'Новый заказ' }));
+  res.render('myOrders', {
+    title: 'Мои заказы',
+    orders,
+    filter: req.query.status,
+    isOrdersPage: true
+  });
+});
+
+app.get('/orders/new', isAuth, (_req, res) => res.render('newOrder', { 
+  title: 'Новый заказ',
+  isOrdersPage: true }));
 app.post('/orders/new', isAuth, async (req, res) => {
   await insertOrder({ ...req.body, user_id: req.session.user.id });
   res.redirect('/orders/my');
@@ -120,17 +148,30 @@ app.post('/orders/edit/:id', isAuth, async (req, res) => {
 
 /* заказы – админ */
 app.get('/orders/active', isAuth, isAdmin, async (_req, res) =>
-  res.render('activeOrders', { title: 'Активные заказы', orders: await getActiveOrders() })
+  res.render('activeOrders', { title: 'Активные заказы',isOrdersPage: true, orders: await getActiveOrders() })
 );
 
 app.get('/orders/archive', isAuth, isAdmin, async (_req, res) =>
-  res.render('archive', { title: 'Архив заказов', orders: await getArchiveOrders() })
+  res.render('archive', { title: 'Архив заказов',isOrdersPage: true, orders: await getArchiveOrders() })
 );
 
 app.post('/orders/update-status/:id', isAuth, isAdmin, async (req, res) => {
-  await updateOrderStatus(req.params.id, req.body.status);
+  const { status } = req.body;
+
+  
+  if (!allowedStatuses.includes(status))
+    return res.status(400).send('Недопустимый статус');
+
+  await updateOrderStatus(req.params.id, status);
   res.redirect('/orders/active');
 });
+
+// админ меняет «Ожидается»
+app.post('/orders/update-eta/:id', isAuth, isAdmin, async (req, res) => {
+  await updateOrderETA(req.params.id, req.body.delivery_date);
+  res.redirect('/orders/active');
+});
+
 app.get('/orders/edit/:id', isAuth, async (req, res) => {
   const order = await getOrderByIdAndUser(req.params.id, req.session.user.id);
 

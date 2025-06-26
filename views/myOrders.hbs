@@ -1,37 +1,46 @@
 <div class="orders-page">
 
-  <!-- заголовок и кнопка «Добавить» -->
-  <div class="page-title">
-    <h1>Мои заказы</h1>
+    <!-- ===== Заголовок ===== -->
+  <h1 class="orders-title">Мои заказы</h1>
+
+    <!-- ===== Бар управления ===== -->
+  <div class="orders-controls">
+
+
+
+    <!-- фильтр по статусу (чек-лист) -->
+    <form class="status-sort" method="get" action="/orders/my">
+      <label for="status" class="status-label">Статус</label>
+
+      <select id="status" name="status">
+        <option value=""                  {{#unless filter}}selected{{/unless}}>Все заказы</option>
+        <option value="На рассмотрении"   {{#eq filter "На рассмотрении"}}selected{{/eq}}>На рассмотрении</option>
+        <option value="Закупаем"          {{#eq filter "Закупаем"}}selected{{/eq}}>Закупаем</option>
+        <option value="Ждём поставку"     {{#eq filter "Ждём поставку"}}selected{{/eq}}>Ждём поставку</option>
+        <option value="Готов к получению" {{#eq filter "Готов к получению"}}selected{{/eq}}>Готов к получению</option>
+        <option value="Пауза"             {{#eq filter "Пауза"}}selected{{/eq}}>Пауза</option>
+      </select>
+
+      <button type="submit"  class="btn-sec">Фильтр</button>
+
+      {{#if filter}}
+        <a href="/orders/my" class="reset-btn">Сбросить</a>
+      {{/if}}
+    </form>
+
+    <!-- кнопка добавления -->
     <a href="/orders/new" class="btn-add">+ Добавить заказ</a>
   </div>
-
-  <!-- фильтр по статусу -->
-  <form class="filter-bar" method="get" action="/orders/my">
-    <select name="status">
-      <option value="" {{#unless filter}}selected{{/unless}}>Все статусы</option>
-      <option value="На рассмотрении" {{#eq filter "На рассмотрении"}}selected{{/eq}}>На&nbsp;рассмотрении</option>
-      <option value="В работе"       {{#eq filter "В работе"}}selected{{/eq}}>В&nbsp;работе</option>
-      <option value="Завершен"       {{#eq filter "Завершен"}}selected{{/eq}}>Завершён</option>
-    </select>
-
-    <button type="submit" class="btn-sec">Фильтр</button>
-
-    {{#if filter}}
-      <a href="/orders/my" class="reset-btn">Сбросить</a>
-    {{/if}}
-  </form>
-
-  <!-- таблица заказов -->
+  <!-- ====== ТАБЛИЦА  ====== -->
   <div class="table-container">
     <table class="orders-table">
       <thead>
         <tr>
           <th>Товар</th>
-          <th>Ссылка</th>
+          <th>Создан</th>
+          <th>Ожидается</th>
           <th>Кол-во</th>
           <th>Цена&nbsp;₽</th>
-          <th>Дата&nbsp;доставки</th>
           <th>Статус</th>
           <th>Действия</th>
         </tr>
@@ -39,16 +48,23 @@
       <tbody>
         {{#each orders}}
           <tr>
-            <td>{{product_name}}</td>
             <td>
               {{#if product_link}}
-                <a href="{{product_link}}" target="_blank" rel="noopener">ссылка</a>
-              {{else}}—{{/if}}
+                <a href="{{product_link}}" target="_blank" rel="noopener">
+                  {{product_name}}
+                </a>
+              {{else}}
+                {{product_name}}
+              {{/if}}
             </td>
+
+            <td>{{date created_at}}</td>
+            <td>{{date delivery_date}}</td>
+
             <td>{{quantity}}</td>
             <td>{{unit_price}}</td>
-            <td>{{delivery_date}}</td>
             <td>{{status}}</td>
+
             <td>
               {{#eq status "На рассмотрении"}}
                 <button type="button"
@@ -63,6 +79,10 @@
       </tbody>
     </table>
   </div>
+
+  {{!-- Модалка редактирования остаётся без изменений --}}
+</div>
+
 
   <!-- модальное окно редактирования -->
   <div id="editModal" class="modal">

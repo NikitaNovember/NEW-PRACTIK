@@ -11,35 +11,51 @@
 
 /* ────────── Сбросы и базовые ──────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0}
+/* ===== базовый body (для всех обычных страниц) ===== */
 body{
-  font-family:'Inter',sans-serif;
+  margin:0;
+  font-family:'Inter','Segoe UI',Tahoma,sans-serif;
   background:var(--bg);
   color:var(--text);
+}
+
+body.login{
   display:flex;
-  min-height:100vh;
   align-items:center;
   justify-content:center;
+  min-height:100vh;
 }
 
 
 
 
-
-/* style.css – лучше сразу после блока “Сбросы и базовые” */
+header{
+  width:100%;
+  background:#121212;
+}
 header nav ul{
   margin:0;
-  padding:0;
-  list-style:none;      /* ← убрали точку */
-  display:flex;         /* пункты в одну строку */
-  gap:1.5rem;           /* промежуток между ними */
+  padding:0 2rem;
+  list-style:none;
+  display:flex;
+  gap:1.5rem;
 }
-
-header nav li a{
-  text-decoration:none;
+header nav a{
   color:var(--text);
+  text-decoration:none;
   font-size:.95rem;
 }
 
+/* ===== фильтр статусов ===== */
+.filter-bar{
+  display:flex;
+  gap:.75rem;
+  flex-wrap:wrap;
+}
+.filter-bar select,
+.filter-bar .btn-sec{
+  flex:0 0 auto;        /* чтобы кнопка «Фильтр» была по контенту */
+}
 
 
 /* ────────── Страница входа ────────────────────────────── */
@@ -114,7 +130,7 @@ button{
 }
 .btn-add{
   padding:.45rem .9rem;
-  background:#4caf50;
+  background:#5500f3;
   border-radius:4px;
   color:#fff;
   text-decoration:none;
@@ -134,7 +150,7 @@ button{
 }
 .reset-btn{
   background:#444;
-  color:#fff;
+  color:#ffffff;
   text-decoration:none;
   padding:.4rem .7rem;
   border-radius:4px;
@@ -157,7 +173,7 @@ button{
 /* ────────── Кнопки для админа ─────────────────────────── */
 .btn-arch{
   padding:.3rem .8rem;
-  background:#ffa500;
+  background:#2902d6;
   border:none;
   border-radius:4px;
   cursor:pointer;
@@ -171,9 +187,10 @@ button{
   padding:.45rem .9rem;
   background:#444;
   border-radius:4px;
-  color:#fff;
+  color:#ffffff;
   text-decoration:none;
 }
+
 
 /* ────────── Адаптив ───────────────────────────────────── */
 @media(max-width:600px){

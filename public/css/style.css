@@ -1,3 +1,4 @@
+/*public/css/style.css*/
 /* ────────── Палитра ───────────────────────────────────── */
 :root{
   --bg:#181818;
@@ -20,6 +21,27 @@ body{
   justify-content:center;
 }
 
+
+
+
+
+/* style.css – лучше сразу после блока “Сбросы и базовые” */
+header nav ul{
+  margin:0;
+  padding:0;
+  list-style:none;      /* ← убрали точку */
+  display:flex;         /* пункты в одну строку */
+  gap:1.5rem;           /* промежуток между ними */
+}
+
+header nav li a{
+  text-decoration:none;
+  color:var(--text);
+  font-size:.95rem;
+}
+
+
+
 /* ────────── Страница входа ────────────────────────────── */
 .login-page{display:flex;gap:6rem;padding:2rem}
 .welcome h1{font-size:2.2rem;margin-bottom:.5rem}
@@ -36,14 +58,14 @@ body{
 .input-group{position:relative;margin-bottom:1.25rem}
 
 /* левый значок (пользователь / замок) */
-.input-group .fa-user,
+/* .input-group .fa-user,
 .input-group .fa-lock{
   position:absolute;
   left:10px;
   top:50%;
   transform:translateY(-50%);
   color:var(--text-muted);
-}
+} */
 
 /* поле ввода */
 .input-group input{

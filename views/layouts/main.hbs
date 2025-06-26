@@ -1,31 +1,58 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{title}}</title>
-  <link rel="preconnect" href="https://fonts.gstatic.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
-  <link rel="stylesheet" href="/css/style.css" />
+
+  <!-- общий CSS -->
+  <link rel="stylesheet" href="/css/style.css">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+        referrerpolicy="no-referrer">
+
+  <!-- только для /login -->
+  {{#if isLoginPage}}
+    <link rel="stylesheet" href="/css/login.css">
+  {{/if}}
+
+  <!-- только для страниц заказов -->
+  {{#if isOrdersPage}}
+    <link rel="stylesheet" href="/css/orders.css">
+  {{/if}}
+  
 </head>
 <body>
-  <header class="navbar">
-    <div class="logo">Практика‑App</div>
-    {{#if @root.user}}
+
+  {{!-- на /login шапка не нужна --}}
+  {{#unless isLoginPage}}
+    <header>
       <nav>
-        <a href="/orders/my">Мои заказы</a>
-        {{#if (eq @root.user.role 'admin')}}
-          <a href="/orders/active">Активные</a>
-          <a href="/orders/archive">Архив</a>
-          <a href="/admin/users">Пользователи</a>
-        {{/if}}
-        <a href="/profile">Профиль</a>
-        <a href="/logout">Выход</a>
+        <ul>
+          {{#if session.user}}
+            <li><a href="/orders/my">Мои заказы</a></li>
+
+            {{#eq session.user.role "admin"}}
+              <li><a href="/orders/active">Активные заказы</a></li>
+              <li><a href="/orders/archive">Архив</a></li>
+            {{/eq}}
+
+            <li><a href="/profile">Профиль</a></li>
+            <li><a href="/logout">Выйти</a></li>
+          {{else}}
+            <li><a href="/login">Войти</a></li>
+          {{/if}}
+        </ul>
       </nav>
-    {{/if}}
-  </header>
-  <main class="content">
+    </header>
+  {{/unless}}
+
+  <main>
     {{{body}}}
   </main>
+
+  <script src="/js/edit.js"></script>
 </body>
 </html>

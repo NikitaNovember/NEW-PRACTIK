@@ -1,41 +1,100 @@
-<h2 class="page-title">
-  Мои заказы
-  <a href="/orders/new" class="btn-add">Добавить</a>
-</h2>
+<div class="orders-page">
 
-<form class="filter-bar" method="GET" action="/orders/my">
-  <select name="status">
-    <option value="" {{#unless query.status}}selected{{/unless}}>Все статусы</option>
-    <option value="На рассмотрении" {{#if (eq query.status 'На рассмотрении')}}selected{{/if}}>На рассмотрении</option>
-    <option value="В обработке" {{#if (eq query.status 'В обработке')}}selected{{/if}}>В обработке</option>
-    <option value="Завершен" {{#if (eq query.status 'Завершен')}}selected{{/if}}>Завершен</option>
-  </select>
-  <button type="submit">Фильтровать</button>
-  {{#if query.status}}
-    <a href="/orders/my" class="reset-btn">Сбросить</a>
-  {{/if}}
-</form>
+  <!-- заголовок и кнопка «Добавить» -->
+  <div class="page-title">
+    <h1>Мои заказы</h1>
+    <a href="/orders/new" class="btn-add">+ Добавить заказ</a>
+  </div>
 
-<table class="orders-table">
-  <thead>
-    <tr>
-      <th>Товар</th><th>Кол-во</th><th>Цена</th><th>Дата</th><th>Статус</th><th></th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#each orders}}
-      <tr>
-        <td>{{product_name}}</td>
-        <td>{{quantity}}</td>
-        <td>{{unit_price}}</td>
-        <td>{{delivery_date}}</td>
-        <td>{{status}}</td>
-        <td>
-          {{#if (eq status 'На рассмотрении')}}
-            <a href="/orders/edit/{{id}}" class="btn-link">Редактировать</a>
-          {{/if}}
-        </td>
-      </tr>
-    {{/each}}
-  </tbody>
-</table>
+  <!-- фильтр по статусу -->
+  <form class="filter-bar" method="get" action="/orders/my">
+    <select name="status">
+      <option value="" {{#unless filter}}selected{{/unless}}>Все статусы</option>
+      <option value="На рассмотрении" {{#eq filter "На рассмотрении"}}selected{{/eq}}>На&nbsp;рассмотрении</option>
+      <option value="В работе"       {{#eq filter "В работе"}}selected{{/eq}}>В&nbsp;работе</option>
+      <option value="Завершен"       {{#eq filter "Завершен"}}selected{{/eq}}>Завершён</option>
+    </select>
+
+    <button type="submit" class="btn-sec">Фильтр</button>
+
+    {{#if filter}}
+      <a href="/orders/my" class="reset-btn">Сбросить</a>
+    {{/if}}
+  </form>
+
+  <!-- таблица заказов -->
+  <div class="table-container">
+    <table class="orders-table">
+      <thead>
+        <tr>
+          <th>Товар</th>
+          <th>Ссылка</th>
+          <th>Кол-во</th>
+          <th>Цена&nbsp;₽</th>
+          <th>Дата&nbsp;доставки</th>
+          <th>Статус</th>
+          <th>Действия</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each orders}}
+          <tr>
+            <td>{{product_name}}</td>
+            <td>
+              {{#if product_link}}
+                <a href="{{product_link}}" target="_blank" rel="noopener">ссылка</a>
+              {{else}}—{{/if}}
+            </td>
+            <td>{{quantity}}</td>
+            <td>{{unit_price}}</td>
+            <td>{{delivery_date}}</td>
+            <td>{{status}}</td>
+            <td>
+              {{#eq status "На рассмотрении"}}
+                <button type="button"
+                        class="btn-edit"
+                        onclick="fillEdit({{id}}, '{{product_name}}', {{quantity}}, {{unit_price}}, '{{product_link}}', '{{delivery_date}}')">
+                  <i class="fa-solid fa-pen"></i>
+                </button>
+              {{else}}—{{/eq}}
+            </td>
+          </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- модальное окно редактирования -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+
+      <form id="editForm" action="/orders/edit" method="post">
+        <input type="hidden" name="orderId" id="editId">
+
+        <label>Товар
+          <input type="text"   name="product_name" id="editProduct" required>
+        </label>
+
+        <label>Кол-во
+          <input type="number" name="quantity"     id="editQty"     min="1" required>
+        </label>
+
+        <label>Цена (₽)
+          <input type="number" name="unit_price"   id="editPrice"   step="0.01" min="0" required>
+        </label>
+
+        <label>Ссылка
+          <input type="url"    name="product_link" id="editLink">
+        </label>
+
+        <label>Дата доставки
+          <input type="date"   name="delivery_date" id="editDate" required>
+        </label>
+
+        <button type="submit" class="btn-submit">Сохранить</button>
+      </form>
+    </div>
+  </div>
+
+</div>

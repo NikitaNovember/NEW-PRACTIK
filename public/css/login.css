@@ -1,0 +1,36 @@
+/*public/css/login.css */
+body, html { margin: 0; padding: 0; height: 100%; }
+body { background: #121212; color: #fff; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; align-items: center; justify-content: center; }
+.login-page { width: 100%; max-width: 900px; padding: 20px; }
+.login-content { display: flex; background: #181818; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+.welcome-section { flex: 1; padding: 60px; background: #1f1f1f; display: flex; flex-direction: column; justify-content: center; }
+.welcome-section h1 { margin: 0 0 20px; font-size: 32px; }
+.welcome-section p { font-size: 16px; line-height: 1.5; }
+.login-card { width: 320px; padding: 40px; background: #252525; display: flex; flex-direction: column; }
+.login-card .error { color: #ff6b6b; margin-bottom: 15px; }
+
+.input-group{    /* высота окошечка */
+  position:relative;
+  margin-bottom:1.3rem; 
+}
+.input-icon{
+  position:absolute;
+  left:10px;
+  top:40%;
+  transform:translateY(60%);
+  pointer-events:none;          /* курсор не цепляет иконку */
+  color:var(--text-muted);
+  font-size:0.95rem;
+}
+
+.input-group label { display: block; font-size: 14px; margin-bottom: 5px; }
+
+.input-group input{
+  padding-left:2.3rem;          /* длина полосочки ввода */
+}
+.input-group input:focus { outline: none; border-bottom-color: #888; }
+.password-wrapper { position: relative; }
+.toggle-password { position: absolute; top: 50%; right: 10px; transform: translateY(-50%); cursor: pointer; }
+.btn-submit { background: #fff; color: #000; border: none; padding: 12px; font-size: 16px; cursor: pointer; border-radius: 4px; margin-top: 10px; }
+.btn-submit:hover { background: #e0e0e0; }
+.note { margin-top: 20px; font-size: 12px; color: #aaa; text-align: center; }

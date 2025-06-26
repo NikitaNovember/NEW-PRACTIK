@@ -1,0 +1,59 @@
+/* ───── макет страницы заказов ────────────────────────── */
+.orders-page{
+  width:100%;
+  max-width:1200px;
+  margin:auto;
+  padding:1rem;
+  display:flex;
+  flex-direction:column;
+  gap:1.5rem;
+}
+
+/* таблица в «скролл-обёртке» для телефонов */
+.table-container{overflow-x:auto}
+
+/* маленькая кнопка-иконка «редактировать» */
+.btn-edit{
+  background:none;
+  border:none;
+  color:var(--accent);
+  font-size:1rem;
+  cursor:pointer;
+}
+.btn-edit:hover{opacity:.7}
+
+/* ────── модальное окно редактирования ────────────────── */
+.modal{
+  display:none;                       /* показывается скриптом */
+  position:fixed; inset:0;
+  background:rgba(0,0,0,.5);
+  backdrop-filter:blur(2px);
+  align-items:center; justify-content:center;
+  z-index:1000;
+}
+.modal-content{
+  width:100%; max-width:380px;
+  background:var(--card);
+  padding:1.5rem 2rem;
+  border-radius:8px;
+  position:relative;
+}
+.modal .close{
+  position:absolute; top:.6rem; right:.8rem;
+  font-size:1.5rem; cursor:pointer;
+}
+.modal label{display:block;font-size:.9rem;margin:.75rem 0 .35rem}
+.modal input{
+  width:100%; padding:.55rem .75rem;
+  background:#1f1f1f;
+  border:none; border-bottom:1px solid #444;
+  color:var(--text);
+}
+.modal input:focus{outline:none;border-bottom-color:#888}
+.modal button{margin-top:1rem}
+
+/* ───── адаптив ───────────────────────────────────────── */
+@media(max-width:600px){
+  .orders-page{padding:.5rem}
+  .page-title{flex-direction:column;align-items:flex-start;gap:.5rem}
+}

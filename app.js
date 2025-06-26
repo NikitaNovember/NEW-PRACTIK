@@ -1,4 +1,4 @@
-// импорт прежний, без bcrypt
+
 import express from 'express';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
@@ -32,6 +32,8 @@ const hbs = expressHbs.create({
 });
 
 const app = express();
+app.use(express.static(path.join(__dirname, 'public')));
+
 app.engine('.hbs', hbs.engine);
 app.set('view engine', '.hbs');
 app.set('views', path.join(__dirname, 'views'));
@@ -45,17 +47,23 @@ app.use(session({
   resave: false,
   saveUninitialized: false
 }));
-app.use(express.static(path.join(__dirname, 'public')));
+
+app.use('/fontawesome', express.static(
+  path.join(__dirname, 'node_modules', '@fortawesome', 'fontawesome-free')
+));
+
 
 const isAuth  = (req, _res, next) => req.session.user ? next() : _res.redirect('/login');
 const isAdmin = (req, res, next) => req.session.user?.role === 'admin' ? next() : res.status(403).send('Forbidden');
 
+
+//----------------------------------ЛОГИН--------------------------------
 app.get('/', (_req, res) => res.redirect('/login'));
-app.get('/login', (_req, res) => res.render('auth/login', { title: 'Вход' }));
+app.get('/login', (_req, res) => res.render('auth/login', { title: 'Вход', isLoginPage: true }));
 
 app.post('/login', async (req, res) => {
   const { login, password } = req.body;
-  if (!login || !password) return res.render('auth/login', { title: 'Вход', error: 'Заполните все поля' });
+  if (!login || !password) return res.render('auth/login', { title: 'Вход',isLoginPage: true, error: 'Заполните все поля' });
 
   const user = await getUserByLogin(login);
   if (!user) return res.render('auth/login', { title: 'Вход', error: 'Пользователь не найден' });
@@ -65,22 +73,35 @@ app.post('/login', async (req, res) => {
   res.redirect(user.role === 'admin' ? '/orders/active' : '/orders/my');
 });
 
+
 app.get('/logout', (req, res) => req.session.destroy(() => res.redirect('/login')));
 
-/* профиль */
-app.get('/profile', isAuth, (req, res) =>
-  res.render('profile', { title: 'Мой профиль', user: req.session.user })
-);
-app.post('/profile/update', isAuth, async (req, res) => {
-  const { name, phone } = req.body;
-  await updateUserProfile(req.session.user.id, name, phone);
-  req.session.user.name = name;
-  res.redirect('/profile');
-});
+
+
+
+
+// //----------------------------------ПРОФИЛЬ ЮЗЕРА--------------------------------
+// app.get('/profile', isAuth, (req, res) =>
+//   res.render('profile', { title: 'Мой профиль',isOrdersPage: true, user: req.session.user })
+// );
+// app.post('/profile/update', isAuth, async (req, res) => {
+//   const { name, phone } = req.body;
+//   await updateUserProfile(req.session.user.id, name, phone);
+//   req.session.user.name = name;
+//   res.redirect('/profile');
+// });
+
+
+// res.render('myOrders', {
+//   title: 'Мои заказы',
+//   orders: await getOrdersByUser(req.session.user.id),
+//   filter: req.query.status,
+//   isOrdersPage: true        
+
 
 /* заказы – пользователи */
 app.get('/orders/my', isAuth, async (req, res) =>
-  res.render('myOrders', { title: 'Мои заказы', orders: await getOrdersByUser(req.session.user.id) })
+  res.render('myOrders', { title: 'Мои заказы',isOrdersPage: true, orders: await getOrdersByUser(req.session.user.id) })
 );
 
 app.get('/orders/new', isAuth, (_req, res) => res.render('newOrder', { title: 'Новый заказ' }));
@@ -93,6 +114,9 @@ app.post('/orders/edit/:id', isAuth, async (req, res) => {
   await editOrderByUser(req.session.user.id, req.params.id, req.body);
   res.redirect('/orders/my');
 });
+
+
+
 
 /* заказы – админ */
 app.get('/orders/active', isAuth, isAdmin, async (_req, res) =>

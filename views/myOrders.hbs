@@ -1,0 +1,41 @@
+<h2 class="page-title">
+  Мои заказы
+  <a href="/orders/new" class="btn-add">Добавить</a>
+</h2>
+
+<form class="filter-bar" method="GET" action="/orders/my">
+  <select name="status">
+    <option value="" {{#unless query.status}}selected{{/unless}}>Все статусы</option>
+    <option value="На рассмотрении" {{#if (eq query.status 'На рассмотрении')}}selected{{/if}}>На рассмотрении</option>
+    <option value="В обработке" {{#if (eq query.status 'В обработке')}}selected{{/if}}>В обработке</option>
+    <option value="Завершен" {{#if (eq query.status 'Завершен')}}selected{{/if}}>Завершен</option>
+  </select>
+  <button type="submit">Фильтровать</button>
+  {{#if query.status}}
+    <a href="/orders/my" class="reset-btn">Сбросить</a>
+  {{/if}}
+</form>
+
+<table class="orders-table">
+  <thead>
+    <tr>
+      <th>Товар</th><th>Кол-во</th><th>Цена</th><th>Дата</th><th>Статус</th><th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each orders}}
+      <tr>
+        <td>{{product_name}}</td>
+        <td>{{quantity}}</td>
+        <td>{{unit_price}}</td>
+        <td>{{delivery_date}}</td>
+        <td>{{status}}</td>
+        <td>
+          {{#if (eq status 'На рассмотрении')}}
+            <a href="/orders/edit/{{id}}" class="btn-link">Редактировать</a>
+          {{/if}}
+        </td>
+      </tr>
+    {{/each}}
+  </tbody>
+</table>

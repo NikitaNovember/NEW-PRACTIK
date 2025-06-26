@@ -1,0 +1,29 @@
+<div class="login-page">
+  <div class="welcome">
+    <h1>Добро пожаловать</h1>
+    <p>Пожалуйста, войдите в систему<br/>для продолжения</p>
+  </div>
+  <div class="login-card">
+    {{#if error}}
+      <p class="error">{{error}}</p>
+    {{/if}}
+    <form action="/login" method="POST">
+      <label class="input-group">
+        <i class="fa-solid fa-envelope"></i>
+        <input name="login" placeholder="Email" required />
+      </label>
+      <label class="input-group">
+        <i class="fa-solid fa-lock"></i>
+        <input type="password" name="password" placeholder="Пароль" required />
+        <i class="fa-solid fa-eye toggle-pass"></i>
+      </label>
+      <button type="submit">Войти</button>
+    </form>
+  </div>
+</div>
+<script>
+  document.querySelector('.toggle-pass')?.addEventListener('click', e => {
+    const input = e.target.previousElementSibling;
+    input.type = input.type === 'password' ? 'text' : 'password';
+  });
+</script>

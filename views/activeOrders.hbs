@@ -1,0 +1,43 @@
+<h2>Активные заказы</h2>
+
+<div class="admin-nav">
+  <a href="/orders/archive" class="btn-sec">Архив</a>
+  <a href="/admin/users"    class="btn-sec">БД пользователей</a>
+</div>
+
+<table class="orders-table">
+  <thead>
+    <tr>
+      <th>ID</th><th>Товар</th><th>К-во</th><th>Покупатель</th>
+      <th>Статус</th><th>Действие</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each orders}}
+      <tr>
+        <td>{{id}}</td>
+        <td>{{product_name}}</td>
+        <td>{{quantity}}</td>
+        <td>{{customer_name}}</td>
+        <td>{{status}}</td>
+        <td>
+          <!-- смена статуса через SELECT -->
+          <form action="/orders/update-status/{{id}}" method="POST" style="display:inline">
+            <select name="status">
+              <option {{#if (eq status 'На рассмотрении')}}selected{{/if}}>На рассмотрении</option>
+              <option {{#if (eq status 'В обработке')}}selected{{/if}}>В обработке</option>
+              <option {{#if (eq status 'Завершен')}}selected{{/if}}>Завершен</option>
+            </select>
+            <button type="submit">OK</button>
+          </form>
+
+          <!-- отправить сразу в архив -->
+          <form action="/orders/update-status/{{id}}" method="POST" style="display:inline">
+            <input type="hidden" name="status" value="Завершен" />
+            <button type="submit" class="btn-arch">В архив</button>
+          </form>
+        </td>
+      </tr>
+    {{/each}}
+  </tbody>
+</table>

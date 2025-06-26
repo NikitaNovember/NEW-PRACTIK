@@ -1,0 +1,10 @@
+<h2>Мой профиль</h2>
+<form action="/profile/update" method="POST" class="profile-form">
+  <label>Имя
+    <input name="name" value="{{user.name}}" required />
+  </label>
+  <label>Телефон
+    <input name="phone" value="{{user.phone}}" />
+  </label>
+  <button type="submit">Сохранить</button>
+</form>

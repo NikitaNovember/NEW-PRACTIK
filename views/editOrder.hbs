@@ -1,0 +1,19 @@
+<h2>Редактировать заказ</h2>
+<form action="/orders/edit/{{order.id}}" method="POST" class="order-form">
+  <label>Название товара
+    <input name="product_name" value="{{order.product_name}}" required />
+  </label>
+  <label>Количество
+    <input type="number" name="quantity" value="{{order.quantity}}" min="1" required />
+  </label>
+  <label>Цена за единицу
+    <input type="number" step="0.01" name="unit_price" value="{{order.unit_price}}" required />
+  </label>
+  <label>Ссылка на товар
+    <input name="product_link" value="{{order.product_link}}" />
+  </label>
+  <label>Желаемая дата доставки
+    <input type="date" name="delivery_date" value="{{order.delivery_date}}" />
+  </label>
+  <button type="submit">Сохранить изменения</button>
+</form>

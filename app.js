@@ -18,6 +18,7 @@ import {
   updateOrderStatus,
   getAllUsers,
   updateOrderETA,
+  getOrderByIdAndUser        
 } from './vendor/db.mjs';
 
 const allowedStatuses = [
@@ -41,14 +42,30 @@ const hbs = expressHbs.create({
   defaultLayout: 'main',
   layoutsDir: path.join(__dirname, 'views', 'layouts'),
   partialsDir: path.join(__dirname, 'views', 'partials'),
-  helpers : {
-  eq  : (a, b) => a == b,
-  date: iso => {
-    if (!iso) return '—';
-    const d = new Date(iso);
-    return d.toLocaleDateString('ru-RU')        
-            .replace(/\./g, '-')                
-  }}});
+
+  /* ——— helpers ——— */
+  helpers: {
+    /* сравнение */
+      /* eq как inline-функция И блок-helper */
+    eq: function (a, b, options) {
+    /* если options (3-й аргумент) отсутствует → вызов inline */
+      if (arguments.length < 3) return a == b;
+
+    /* вызов как блок */
+      return (a == b) ? options.fn(this) : options.inverse(this);
+  },
+
+    /* dd-mm-yyyy */
+    date: iso => {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleDateString('ru-RU').replace(/\./g, '-');
+    },
+
+    /* цена × количество → 2 знака после запятой */
+    multiply: (a, b) => (Number(a) * Number(b)).toFixed(2)
+  }
+});
 
 const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
@@ -76,7 +93,7 @@ const isAuth  = (req, _res, next) => req.session.user ? next() : _res.redirect('
 const isAdmin = (req, res, next) => req.session.user?.role === 'admin' ? next() : res.status(403).send('Forbidden');
 
 
-//----------------------------------ЛОГИН--------------------------------
+//-ЛОГИН
 app.get('/', (_req, res) => res.redirect('/login'));
 app.get('/login', (_req, res) => res.render('auth/login', { title: 'Вход', isLoginPage: true }));
 
@@ -98,42 +115,48 @@ app.get('/logout', (req, res) => req.session.destroy(() => res.redirect('/login'
 
 
 
-
-// //----------------------------------ПРОФИЛЬ ЮЗЕРА--------------------------------
-// app.get('/profile', isAuth, (req, res) =>
-//   res.render('profile', { title: 'Мой профиль',isOrdersPage: true, user: req.session.user })
-// );
-// app.post('/profile/update', isAuth, async (req, res) => {
-//   const { name, phone } = req.body;
-//   await updateUserProfile(req.session.user.id, name, phone);
-//   req.session.user.name = name;
-//   res.redirect('/profile');
-// });
-
-
-// res.render('myOrders', {
-//   title: 'Мои заказы',
-//   orders: await getOrdersByUser(req.session.user.id),
-//   filter: req.query.status,
-//   isOrdersPage: true        
-
-
-/* заказы – пользователи */
 app.get('/orders/my', isAuth, async (req, res) => {
-  const orders = await getOrdersByUser(req.session.user.id);
+  const filter = req.query.status || '';          // '' = «Все заказы»
+    let orders = await getOrdersByUser(
+    req.session.user.id,
+    filter ? filter : null
+  );
+
+  /* по умолчанию скрываем «Отменено» и «Получено» */
+  if (!filter) {
+    orders = orders.filter(o =>
+      o.status !== 'Отменено' && o.status !== 'Получено'
+    );
+  }
 
   res.render('myOrders', {
     title: 'Мои заказы',
     orders,
-    filter: req.query.status,
+    filter,
     isOrdersPage: true
   });
 });
 
-app.get('/orders/new', isAuth, (_req, res) => res.render('newOrder', { 
+app.get('/orders/new', isAuth, (_req, res) => {
+  const today = new Date().toISOString().slice(0, 10);   // YYYY-MM-DD
+  res.render('newOrder', { 
   title: 'Новый заказ',
-  isOrdersPage: true }));
+  isOrdersPage: true,
+  today  })
+  });
+
 app.post('/orders/new', isAuth, async (req, res) => {
+  const rxFio = /^[А-Яа-яЁё\s\-]{5,60}$/;
+  const rxPhone = /^\+7\d{10}$/;
+
+  if (!rxFio.test(req.body.customer_name)) {
+    return res.status(400).send('ФИО должно содержать только русские буквы, пробелы и дефис.');
+  }
+
+  if (!rxPhone.test(req.body.customer_phone)) {
+  return res.status(400).send('Телефон: только цифры, 10-15 символов.');
+  }
+
   await insertOrder({ ...req.body, user_id: req.session.user.id });
   res.redirect('/orders/my');
 });
@@ -143,10 +166,21 @@ app.post('/orders/edit/:id', isAuth, async (req, res) => {
   res.redirect('/orders/my');
 });
 
+/* пользователь отменяет свой заказ, если тот ещё "На рассмотрении" */
+app.post('/orders/cancel/:id', isAuth, async (req, res) => {
+  const order = await getOrderByIdAndUser(req.params.id, req.session.user.id);
+
+  /* если заказа нет или его уже начали обрабатывать – просто назад */
+  if (!order || order.status !== 'На рассмотрении')
+    return res.redirect('/orders/my');
+
+  await updateOrderStatus(req.params.id, 'Отменено');
+  res.redirect('/orders/my');
+});
 
 
 
-/* заказы – админ */
+
 app.get('/orders/active', isAuth, isAdmin, async (_req, res) =>
   res.render('activeOrders', { title: 'Активные заказы',isOrdersPage: true, orders: await getActiveOrders() })
 );
@@ -158,15 +192,22 @@ app.get('/orders/archive', isAuth, isAdmin, async (_req, res) =>
 app.post('/orders/update-status/:id', isAuth, isAdmin, async (req, res) => {
   const { status } = req.body;
 
-  
-  if (!allowedStatuses.includes(status))
-    return res.status(400).send('Недопустимый статус');
+  const allowed = [
+    'На рассмотрении','Закупаем','Ждём поставку',
+    'Готов к получению','Пауза','Получено','Отменено'
+  ];
+  if (!allowed.includes(status))
+    return res.status(400).send('Bad status');
 
   await updateOrderStatus(req.params.id, status);
+
+  // /* === ключ: отправляем на нужную страницу === */
+  // if (status === 'Получено' || status === 'Отменено') {
+  //   return res.redirect('/orders/archive');
+  // }
   res.redirect('/orders/active');
 });
 
-// админ меняет «Ожидается»
 app.post('/orders/update-eta/:id', isAuth, isAdmin, async (req, res) => {
   await updateOrderETA(req.params.id, req.body.delivery_date);
   res.redirect('/orders/active');
@@ -175,7 +216,7 @@ app.post('/orders/update-eta/:id', isAuth, isAdmin, async (req, res) => {
 app.get('/orders/edit/:id', isAuth, async (req, res) => {
   const order = await getOrderByIdAndUser(req.params.id, req.session.user.id);
 
-  // если заказ не найден или уже не «На рассмотрении» — обратно к списку
+  
   if (!order || order.status !== 'На рассмотрении')
     return res.redirect('/orders/my');
 
@@ -183,7 +224,7 @@ app.get('/orders/edit/:id', isAuth, async (req, res) => {
 });
 
 app.get('/admin/users', isAuth, isAdmin, async (_req, res) => {
-  res.render('adminUsers', { title: 'БД пользователей', users: await getAllUsers() });
+  res.render('adminUsers', { title: 'БД пользователей',isOrdersPage: true, users: await getAllUsers() });
 });
 
 

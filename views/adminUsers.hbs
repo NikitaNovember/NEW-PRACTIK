@@ -1,25 +1,26 @@
-<h2>Список пользователей</h2>
+<div class="orders-page">
+  <h2>База пользователей</h2>
 
-<div class="admin-nav">
-  <a href="/orders/active" class="btn-sec">К активным заказам</a>
-  <a href="/orders/archive" class="btn-sec">Архив заказов</a>
-</div>
+  <div class="admin-nav">
+    <a href="/orders/active" class="btn-sec">К активным заказам</a>
+    <a href="/orders/archive" class="btn-sec">Архив заказов</a>
+  </div>
 
-<table class="orders-table">
-  <thead>
-    <tr>
-      <th>ID</th><th>Имя</th><th>Логин</th><th>Телефон</th><th>Роль</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#each users}}
+  <table class="orders-table">
+    <thead>
       <tr>
-        <td>{{id}}</td>
-        <td>{{name}}</td>
-        <td>{{login}}</td>
-        <td>{{phone}}</td>
-        <td>{{role}}</td>
+        <th>ID</th><th>Имя</th><th>Логин</th><th>Роль</th>
       </tr>
-    {{/each}}
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      {{#each users}}
+        <tr>
+          <td>{{id}}</td>
+          <td>{{name}}</td>
+          <td>{{login}}</td>
+          <td>{{role}}</td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+  </div>

@@ -1,13 +1,22 @@
+/* крестик-отмена */
+.btn-cancel{
+  background:none;
+  border:none;
+  color:#ff4d4d;          /* красный из палитры */
+  font-size:1rem;
+  cursor:pointer;
+  padding:0 .2rem;
+}
+.btn-cancel:hover{opacity:.75}
 
-/* ─── ячейка действий в админ-таблице ─────────────────── */
-/* ─── действия в админ-таблице одним рядом ───────────── */
+
 .action-cell{
   display:flex;
   align-items:center;
   gap:.6rem;                     /* расстояние между элементами */
 }
 
-/* оба <form> и их содержимое тоже в одну строку */
+
 .action-cell form{
   display:flex;
   align-items:center;
@@ -19,13 +28,13 @@
   width:170px;
 }
 
-/* сбиваем глобальное width:100% */
+
 .action-cell button{
-  width:auto !important;         /* ← ключевая строка */
+  width:auto !important;        
   padding:.4rem .9rem;
 }
 
-/* ─── форма редактирования ETA ─────────────────────── */
+
 .eta-form{ display:flex; align-items:center; gap:.4rem; }
 .eta-form input{
   background:#2c2c2b;
@@ -58,7 +67,7 @@
 }
 .btn-arch{
   padding:.4rem .9rem;
-  background:#4f00ff;     /* используемый ранее фиолетовый */
+  background:#4f00ff;     
   color:#fff;
   border:none;
   border-radius:4px;
@@ -69,7 +78,7 @@
 
 
 
-/* ─── Новая карточка заказа ─────────────────────────── */
+
 .new-order-page{
   max-width:500px;
   margin:0 auto;
@@ -83,7 +92,7 @@
   gap:1.25rem;
 }
 
-/* подпись + инпут в столбик */
+
 .order-form label{
   display:flex;
   flex-direction:column;
@@ -91,7 +100,7 @@
   gap:.35rem;
 }
 
-/* стилизованный инпут */
+
 .order-form input{
   padding:.55rem .75rem;
   background:transparent;
@@ -104,12 +113,12 @@
   border-bottom-color:var(--accent);
 }
 
-/* кнопка отправки */
+
 .order-form .btn-submit{
   margin-top:1rem;
 }
 
-/* ───── макет страницы заказов ────────────────────────── */
+
 .orders-page{
   width:100%;
   max-width:1200px;
@@ -127,16 +136,16 @@
 
 .orders-controls{
   display:flex;
-  justify-content:space-between;   /* фильтр ←→ кнопка */
+  justify-content:space-between;   
   align-items:flex-end;
   flex-wrap:wrap;
   gap:1rem;
-  margin:2rem 0 .2rem;             /* дистанция до таблицы */
+  margin:2rem 0 .2rem;             
 }
 
 :root{
-  /* добавляем переменную для ссылок на тёмном фоне */
-  --link:#5ea0ff;               /* мягкий голубой, не ядреный #00f */
+  
+  --link:#5ea0ff;               
 }
 
 .orders-table a{
@@ -161,14 +170,14 @@
 .status-sort select{
   width:180px;
   padding:.35rem .6rem;
-  background:#181818;              /* чёрная заливка */
-  color:var(--text);            /* белый текст */
+  background:#181818;             
+  color:var(--text);            
   border:1px solid #292929;
   border-radius:2px;
-  appearance:none;              /* убираем системный стиль (Chrome/Edge) */
+  appearance:none;              
 }
 
-.status-sort select::-ms-expand{display:none}      /* IE */
+.status-sort select::-ms-expand{display:none}     
 .status-sort select::-webkit-scrollbar{width:0}   
 
 .status-sort select option{
@@ -185,7 +194,7 @@
 .orders-header{
   position:relative;
   margin-bottom:1.75rem;
-  text-align:center;          /* заголовок остаётся по центру */
+  text-align:center;          
 }
 
 .orders-header .btn-add{
@@ -203,7 +212,7 @@
   color:var(--text-muted);
 }
 
-/* стилизуем <select> под скриншот */
+
 .status-field select{
   width:180px;
   padding:.35rem .6rem;
@@ -214,13 +223,13 @@
 }
 .status-field select:focus{outline:none;border-bottom-color:var(--accent)}
 
-/* ─── таблица чуть ниже сортировки ────────────────────── */
+
 .table-container{margin-top:1rem}
 
-/* таблица в «скролл-обёртке» для телефонов */
+
 .table-container{overflow-x:auto}
 
-/* маленькая кнопка-иконка «редактировать» */
+
 .btn-edit{
   background:none;
   border:none;
@@ -230,9 +239,9 @@
 }
 .btn-edit:hover{opacity:.7}
 
-/* ────── модальное окно редактирования ────────────────── */
+
 .modal{
-  display:none;                       /* показывается скриптом */
+  display:none;                       
   position:fixed; inset:0;
   background:rgba(0,0,0,.5);
   backdrop-filter:blur(2px);
@@ -261,8 +270,9 @@
 .modal button{margin-top:1rem}
 
 
+
 /* ───── адаптив ───────────────────────────────────────── */
 @media(max-width:600px){
   .orders-controls{flex-direction:column;align-items:stretch}
-  .btn-add{align-self:flex-end}    /* кнопка останется сверху справа */
+  .btn-add{align-self:flex-end}    
 }

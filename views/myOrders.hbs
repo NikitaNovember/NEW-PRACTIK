@@ -1,14 +1,14 @@
 <div class="orders-page">
 
-    <!-- ===== Заголовок ===== -->
+    
   <h1 class="orders-title">Мои заказы</h1>
 
-    <!-- ===== Бар управления ===== -->
+    
   <div class="orders-controls">
 
 
 
-    <!-- фильтр по статусу (чек-лист) -->
+    
     <form class="status-sort" method="get" action="/orders/my">
       <label for="status" class="status-label">Статус</label>
 
@@ -28,10 +28,10 @@
       {{/if}}
     </form>
 
-    <!-- кнопка добавления -->
+    
     <a href="/orders/new" class="btn-add">+ Добавить заказ</a>
   </div>
-  <!-- ====== ТАБЛИЦА  ====== -->
+  
   <div class="table-container">
     <table class="orders-table">
       <thead>
@@ -41,6 +41,7 @@
           <th>Ожидается</th>
           <th>Кол-во</th>
           <th>Цена&nbsp;₽</th>
+          <th>Сумма ₽</th>
           <th>Статус</th>
           <th>Действия</th>
         </tr>
@@ -60,31 +61,34 @@
 
             <td>{{date created_at}}</td>
             <td>{{date delivery_date}}</td>
-
+            
             <td>{{quantity}}</td>
             <td>{{unit_price}}</td>
+            <td>{{multiply unit_price quantity}}</td>
             <td>{{status}}</td>
 
             <td>
               {{#eq status "На рассмотрении"}}
-                <button type="button"
-                        class="btn-edit"
-                        onclick="fillEdit({{id}}, '{{product_name}}', {{quantity}}, {{unit_price}}, '{{product_link}}', '{{delivery_date}}')">
-                  <i class="fa-solid fa-pen"></i>
-                </button>
-              {{else}}—{{/eq}}
+                <form action="/orders/cancel/{{id}}" method="post" style="display:inline">
+                  <button class="btn-cancel" title="Отменить">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </form>
+              
+              {{/eq}}
             </td>
+
           </tr>
         {{/each}}
       </tbody>
     </table>
   </div>
 
-  {{!-- Модалка редактирования остаётся без изменений --}}
+  
 </div>
 
 
-  <!-- модальное окно редактирования -->
+  
   <div id="editModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeModal()">&times;</span>

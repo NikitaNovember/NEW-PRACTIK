@@ -39,8 +39,17 @@ export async function insertOrder(o) {
   return r.insertId;
 }
 
-export async function getOrdersByUser(uid) {
-  const [r] = await pool.query('SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC', [uid]);
+export async function getOrdersByUser(uid, status = null) {
+  let  sql = 'SELECT * FROM orders WHERE user_id = ?';
+  const p  = [uid];
+
+  if (status) {                  // если нужна фильтрация
+    sql += ' AND status = ?';
+    p.push(status);
+  }
+
+  sql += ' ORDER BY created_at DESC';
+  const [r] = await pool.query(sql, p);
   return r;
 }
 
@@ -53,12 +62,20 @@ export async function editOrderByUser(uid, oid, data) {
 }
 
 export async function getActiveOrders() {
-  const [r] = await pool.query("SELECT * FROM orders WHERE status <> 'Завершен' ORDER BY created_at DESC");
+  const [r] = await pool.query(
+    "SELECT * FROM orders \
+     WHERE status NOT IN ('Получено','Отменено') \
+     ORDER BY created_at DESC"
+  );
   return r;
 }
 
 export async function getArchiveOrders() {
-  const [r] = await pool.query("SELECT * FROM orders WHERE status = 'Завершен' ORDER BY created_at DESC");
+  const [r] = await pool.query(
+    "SELECT * FROM orders \
+     WHERE status IN ('Получено','Отменено') \
+     ORDER BY created_at DESC"
+  );
   return r;
 }
 
@@ -73,6 +90,6 @@ export async function getOrderByIdAndUser(oid, uid) {
   return r[0] ?? null;
 }
 export async function getAllUsers() {
-  const [rows] = await pool.query('SELECT id, name, login, phone, role FROM users ORDER BY id');
+  const [rows] = await pool.query('SELECT id, name, login, role FROM users ORDER BY id');
   return rows;
 }

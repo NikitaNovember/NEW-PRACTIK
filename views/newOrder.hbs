@@ -2,14 +2,14 @@
   <h1 class="orders-title">Новый заказ</h1>
 
   <form action="/orders/new" method="post" class="order-form">
-    <label>
-      ФИО заказчика
-      <input type="text"       name="customer_name"   required>
+    <label>ФИО заказчика
+      <input name="customer_name"
+            pattern="^[А-Яа-яЁё\s\-]+$" minlength="5" maxlength="60" title="Только русские буквы, пробелы и дефис"  required>       <!-- ❱ только буквы/пробел/- -->
     </label>
 
-    <label>
-      Телефон
-      <input type="tel"        name="customer_phone"  required>
+
+    <label>Телефон
+      <input name="customer_phone" type="tel" pattern="^\+7\d{10}$" minlength="10" maxlength="15" title="Формат: +7XXXXXXXXXX" required>   
     </label>
 
     <label>
@@ -32,9 +32,10 @@
       <input type="url"        name="product_link">
     </label>
 
-    <label>
-      Желаемая дата доставки
-      <input type="date"       name="delivery_date"   required>
+    <label>Желаемая дата доставки
+      <input name="delivery_date"
+            type="date"
+            min="{{today}}" required>        <!-- нельзя выбрать вчера -->     
     </label>
 
     <button type="submit" class="btn-submit">Отправить</button>

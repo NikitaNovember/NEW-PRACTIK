@@ -1,27 +1,40 @@
-<h2>Архив завершённых заказов</h2>
+<div class="orders-page">
+  <h2>Архив завершённых заказов</h2>
 
-<div class="admin-nav">
-  <a href="/orders/active" class="btn-sec">Назад к активным</a>
-  <a href="/admin/users"   class="btn-sec">БД пользователей</a>
-</div>
+  <div class="admin-nav">
+    <a href="/orders/active" class="btn-sec">Назад к активным</a>
+    <a href="/admin/users"   class="btn-sec">БД пользователей</a>
+  </div>
 
-<table class="orders-table">
-  <thead>
-    <tr>
-      <th>ID</th><th>Товар</th><th>К-во</th><th>Покупатель</th>
-      <th>Дата доставки</th><th>Сумма</th>
-    </tr>
-  </thead>
-  <tbody>
-    {{#each orders}}
+  <table class="orders-table">
+    <thead>
       <tr>
-        <td>{{id}}</td>
-        <td>{{product_name}}</td>
-        <td>{{quantity}}</td>
-        <td>{{customer_name}}</td>
-        <td>{{delivery_date}}</td>
-        <td>{{sum}}</td>
+        <th>ID</th>
+        <th>Покупатель</th>
+        <th>Товар</th>
+        <th>К-во</th>
+        <th>Цена ₽</th>
+        <th>Сумма ₽</th>
+        <th>Создан</th>
+        <th>Ожидается</th>
+        <th>Статус</th>
       </tr>
-    {{/each}}
-  </tbody>
-</table>
+    </thead>
+
+    <tbody>
+      {{#each orders}}
+        <tr>
+          <td>{{id}}</td>
+          <td>{{customer_name}}</td>
+          <td>{{product_name}}</td>
+          <td>{{quantity}}</td>
+          <td>{{unit_price}}</td>
+          <td>{{multiply unit_price quantity}}</td>
+          <td>{{date created_at}}</td>
+          <td>{{date delivery_date}}</td>
+          <td>{{status}}</td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>

@@ -148,6 +148,7 @@
   --link:#5ea0ff;               
 }
 
+
 .orders-table a{
   color:var(--link);
   text-decoration:underline;
@@ -227,7 +228,7 @@
 .table-container{margin-top:1rem}
 
 
-.table-container{overflow-x:auto}
+.table-container{overflow-x:visible}
 
 
 .btn-edit{
@@ -276,3 +277,27 @@
   .orders-controls{flex-direction:column;align-items:stretch}
   .btn-add{align-self:flex-end}    
 }
+
+/* отменяем горизонтальный скролл */
+.table-container {
+  overflow-x: visible;
+}
+
+/* пусть таблица остаётся 100%, но без ужатия шрифта */
+.orders-table {
+  table-layout: auto;
+}
+
+/* только название товара может переноситься */
+.orders-table td.product-col {
+  max-width: 200px;          /* или 180px — подогнайте под макет */
+  white-space: normal;       /* разрешаем перенос */
+  word-break: break-word;    /* разрываем длинные слова */
+}
+
+/* чуть скорректируем отступы */
+.orders-table th,
+.orders-table td {
+  padding: .6rem .8rem;
+}
+

@@ -14,7 +14,9 @@ const pool = mysql.createPool({
 });
 
 export async function getUserByLogin(login) {
-  const [r] = await pool.query('SELECT * FROM users WHERE login = ? LIMIT 1', [login]);
+    const [r] = await pool.query(
+      `SELECT id, name, surname, patronymic, phone, role, password
+      FROM users WHERE login = ? LIMIT 1`, [login]);
   return r[0] ?? null;
 }
 
@@ -61,14 +63,40 @@ export async function editOrderByUser(uid, oid, data) {
   );
 }
 
-export async function getActiveOrders() {
-  const [r] = await pool.query(
-    "SELECT * FROM orders \
-     WHERE status NOT IN ('Получено','Отменено') \
-     ORDER BY created_at DESC"
+export async function updateOrderLinkAndDate(oid, uid, link, date) {
+  await pool.query(
+    `UPDATE orders
+       SET product_link  = ?,
+           delivery_date = ?
+     WHERE id = ? 
+       AND user_id = ?
+       AND status = 'На рассмотрении'`,
+    [link, date, oid, uid]
   );
+}
+
+
+// vendor/db.mjs
+export async function getActiveOrders(loginFilter = null) {
+  // если передан loginFilter, добавляем условие по users.login
+  let sql = `
+    SELECT o.*, u.login AS user_login
+    FROM orders o
+    JOIN users u ON o.user_id = u.id
+    WHERE o.status NOT IN ('Получено','Отменено')
+  `;
+  const params = [];
+
+  if (loginFilter) {
+    sql += ` AND u.login = ?`;
+    params.push(loginFilter);
+  }
+
+  sql += ` ORDER BY o.created_at DESC`;
+  const [r] = await pool.query(sql, params);
   return r;
 }
+
 
 export async function getArchiveOrders() {
   const [r] = await pool.query(
@@ -93,3 +121,5 @@ export async function getAllUsers() {
   const [rows] = await pool.query('SELECT id, name, login, role FROM users ORDER BY id');
   return rows;
 }
+
+

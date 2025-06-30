@@ -3,14 +3,16 @@
 
   <form action="/orders/new" method="post" class="order-form">
     <label>ФИО заказчика
-      <input name="customer_name"
-            pattern="^[А-Яа-яЁё\s\-]+$" minlength="5" maxlength="60" title="Только русские буквы, пробелы и дефис"  required>       <!-- ❱ только буквы/пробел/- -->
+      <input value="{{fullName}}" readonly>
+      <input type="hidden" name="customer_name" value="{{fullName}}">
     </label>
-
 
     <label>Телефон
-      <input name="customer_phone" type="tel" pattern="^\+7\d{10}$" minlength="10" maxlength="15" title="Формат: +7XXXXXXXXXX" required>   
+      <input value="{{userPhone}}" readonly>
+      <input type="hidden" name="customer_phone" value="{{userPhone}}">
     </label>
+
+
 
     <label>
       Название товара

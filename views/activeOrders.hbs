@@ -1,69 +1,88 @@
-<div class="orders-page"><!-- ⇦ НОВОЕ -->
+{{!-- views/activeOrders.hbs --}}
+
+<div class="orders-page">
 
   <h2>Активные заказы</h2>
 
   <div class="admin-nav">
-    <a href="/orders/archive" class="btn-sec">Архив</a>
+    <a href="/orders/archive" class="btn-sec">Архив заказов</a>
     <a href="/admin/users"    class="btn-sec">БД пользователей</a>
   </div>
 
-  <table class="orders-table">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Товар</th>
-        <th>К-во</th>
-        <th>Цена ₽</th>
-        <th>Покупатель</th>
-        <th>Создан</th>
-        <th>Ожидается</th>
-        <th>Статус</th>
-        <th>Действие</th>
-      </tr>
-    </thead>
+  {{!-- фильтр по логину пользователя --}}
+  <form method="get" action="/orders/active" class="status-sort" style="margin-bottom:1rem;">
+    <label for="login" class="status-label">Пользователь (логин):</label>
+    <input
+      type="text"
+      id="login"
+      name="login"
+      value="{{loginFilter}}"
+      placeholder="Введите логин"
+      class="status-field">
+    <button type="submit" class="btn-sec">Применить</button>
+    {{#if loginFilter}}
+      <a href="/orders/active" class="reset-btn">Сбросить</a>
+    {{/if}}
+  </form>
 
-    <tbody>
-      {{#each orders}}
+  <div class="table-container">
+    <table class="orders-table">
+      <thead>
         <tr>
-          <td>{{id}}</td>
-          <td>{{product_name}}</td>
-          <td>{{quantity}}</td>
-          <td>{{unit_price}}</td>
-          <td>{{customer_name}}</td>
-          <td>{{date created_at}}</td>
-
-          <td>
-            <form action="/orders/update-eta/{{id}}" method="post" class="eta-form">
-              <input type="date" name="delivery_date"
-                     value="{{delivery_date}}" required>
-              <button class="btn-sec">→</button>
-            </form>
-          </td>
-
-          <td>{{status}}</td>
-
-          <td class="action-cell">
-            <form action="/orders/update-status/{{id}}" method="post" class="action-form">
-              <select name="status">
-                <option value="На рассмотрении"   {{#eq status "На рассмотрении"}}selected{{/eq}}>На рассмотрении</option>
-                <option value="Закупаем"          {{#eq status "Закупаем"}}selected{{/eq}}>Закупаем</option>
-                <option value="Ждём поставку"     {{#eq status "Ждём поставку"}}selected{{/eq}}>Ждём поставку</option>
-                <option value="Готов к получению" {{#eq status "Готов к получению"}}selected{{/eq}}>Готов к получению</option>
-                <option value="Пауза"             {{#eq status "Пауза"}}selected{{/eq}}>Пауза</option>
-                <option value="Получено"          {{#eq status "Получено"}}selected{{/eq}}>Получено</option>
-                <option value="Отменено"          {{#eq status "Отменено"}}selected{{/eq}}>Отменено</option>
-              </select>
-              <button class="btn-sec">OK</button>
-            </form>
-
-            <form action="/orders/update-status/{{id}}" method="post">
-              <input type="hidden" name="status" value="Отменено">
-              <button class="btn-arch">В архив</button>
-            </form>
-          </td>
+          <th>ID</th>
+          <th>Пользователь</th>
+          <th>Товар</th>
+          <th>К-во</th>
+          <th>Цена ₽</th>
+          <th>Сумма ₽</th>
+          <th>Создан</th>
+          <th>Ожидается</th>
+          <th>Статус</th>
+          <th>Действия</th>
         </tr>
-      {{/each}}
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        {{#each orders}}
+          <tr>
+            <td>{{id}}</td>
+            <td>{{user_login}}</td>
+            <td>{{product_name}}</td>
+            <td>{{quantity}}</td>
+            <td>{{unit_price}}</td>
+            <td>{{multiply unit_price quantity}}</td>
+            <td>{{date created_at}}</td>
+            <td>{{date delivery_date}}</td>
+            <td>{{status}}</td>
 
-</div><!-- /.orders-page -->
+            <td class="action-cell">
+              {{!-- смена статуса --}}
+              <form action="/orders/update-status/{{id}}"
+                    method="post"
+                    class="action-form">
+                <select name="status">
+                  <option value="На рассмотрении"   {{#eq status "На рассмотрении"}}selected{{/eq}}>На рассмотрении</option>
+                  <option value="Закупаем"          {{#eq status "Закупаем"}}selected{{/eq}}>Закупаем</option>
+                  <option value="Ждём поставку"     {{#eq status "Ждём поставку"}}selected{{/eq}}>Ждём поставку</option>
+                  <option value="Готов к получению" {{#eq status "Готов к получению"}}selected{{/eq}}>Готов к получению</option>
+                  <option value="Пауза"             {{#eq status "Пауза"}}selected{{/eq}}>Пауза</option>
+                  <option value="Получено"          {{#eq status "Получено"}}selected{{/eq}}>Получено</option>
+                  <option value="Отменено"          {{#eq status "Отменено"}}selected{{/eq}}>Отменено</option>
+                </select>
+                <button type="submit" class="btn-sec">OK</button>
+              </form>
+
+              {{!-- сразу в архив --}}
+              <form action="/orders/update-status/{{id}}"
+                    method="post"
+                    class="action-form">
+                <input type="hidden" name="status" value="Завершен">
+                <button type="submit" class="btn-arch">В архив</button>
+              </form>
+            </td>
+          </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+
+</div>

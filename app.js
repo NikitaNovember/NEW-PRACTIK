@@ -18,7 +18,8 @@ import {
   updateOrderStatus,
   getAllUsers,
   updateOrderETA,
-  getOrderByIdAndUser        
+  getOrderByIdAndUser,
+  updateOrderLinkAndDate,        
 } from './vendor/db.mjs';
 
 const allowedStatuses = [
@@ -105,7 +106,7 @@ app.post('/login', async (req, res) => {
   if (!user) return res.render('auth/login', { title: 'Вход', error: 'Пользователь не найден' });
   if (user.password !== password) return res.render('auth/login', { title: 'Вход', error: 'Неверный пароль' });
 
-  req.session.user = { id: user.id, name: user.name, role: user.role };
+  req.session.user = { id: user.id, name: user.name, surname: user.surname, patronymic: user.patronymic, phone: user.phone,  role: user.role };
   res.redirect(user.role === 'admin' ? '/orders/active' : '/orders/my');
 });
 
@@ -139,10 +140,14 @@ app.get('/orders/my', isAuth, async (req, res) => {
 
 app.get('/orders/new', isAuth, (_req, res) => {
   const today = new Date().toISOString().slice(0, 10);   // YYYY-MM-DD
+  const fullName = `${_req.session.user.surname} ${_req.session.user.name} ${_req.session.user.patronymic}`.trim();
   res.render('newOrder', { 
   title: 'Новый заказ',
   isOrdersPage: true,
-  today  })
+  today,
+  fullName,
+  userPhone: _req.session.user.phone  
+    });
   });
 
 app.post('/orders/new', isAuth, async (req, res) => {
@@ -178,12 +183,30 @@ app.post('/orders/cancel/:id', isAuth, async (req, res) => {
   res.redirect('/orders/my');
 });
 
+app.post('/orders/update-user/:id', isAuth, async (req, res) => {
+  const { product_link, delivery_date } = req.body;
+  await updateOrderLinkAndDate(
+    req.params.id,
+    req.session.user.id,
+    product_link,
+    delivery_date
+  );
+  res.redirect('/orders/my');
+});
 
 
+// app.js
+app.get('/orders/active', isAuth, isAdmin, async (req, res) => {
+  const loginFilter = req.query.login?.trim() || null;
+  const orders = await getActiveOrders(loginFilter);
+  res.render('activeOrders', {
+    title: 'Активные заказы',
+    isOrdersPage: true,
+    orders,
+    loginFilter
+  });
+});
 
-app.get('/orders/active', isAuth, isAdmin, async (_req, res) =>
-  res.render('activeOrders', { title: 'Активные заказы',isOrdersPage: true, orders: await getActiveOrders() })
-);
 
 app.get('/orders/archive', isAuth, isAdmin, async (_req, res) =>
   res.render('archive', { title: 'Архив заказов',isOrdersPage: true, orders: await getArchiveOrders() })
@@ -230,3 +253,5 @@ app.get('/admin/users', isAuth, isAdmin, async (_req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`http://localhost:${PORT}`));
+
+// 

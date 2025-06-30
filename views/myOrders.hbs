@@ -1,17 +1,10 @@
 <div class="orders-page">
 
-    
   <h1 class="orders-title">Мои заказы</h1>
 
-    
   <div class="orders-controls">
-
-
-
-    
     <form class="status-sort" method="get" action="/orders/my">
       <label for="status" class="status-label">Статус</label>
-
       <select id="status" name="status">
         <option value=""                  {{#unless filter}}selected{{/unless}}>Все заказы</option>
         <option value="На рассмотрении"   {{#eq filter "На рассмотрении"}}selected{{/eq}}>На рассмотрении</option>
@@ -20,18 +13,15 @@
         <option value="Готов к получению" {{#eq filter "Готов к получению"}}selected{{/eq}}>Готов к получению</option>
         <option value="Пауза"             {{#eq filter "Пауза"}}selected{{/eq}}>Пауза</option>
       </select>
-
-      <button type="submit"  class="btn-sec">Фильтр</button>
-
+      <button type="submit" class="btn-sec">Фильтр</button>
       {{#if filter}}
         <a href="/orders/my" class="reset-btn">Сбросить</a>
       {{/if}}
     </form>
 
-    
     <a href="/orders/new" class="btn-add">+ Добавить заказ</a>
   </div>
-  
+
   <div class="table-container">
     <table class="orders-table">
       <thead>
@@ -40,7 +30,7 @@
           <th>Создан</th>
           <th>Ожидается</th>
           <th>Кол-во</th>
-          <th>Цена&nbsp;₽</th>
+          <th>Цена ₽</th>
           <th>Сумма ₽</th>
           <th>Статус</th>
           <th>Действия</th>
@@ -48,77 +38,128 @@
       </thead>
       <tbody>
         {{#each orders}}
-          <tr>
-            <td>
-              {{#if product_link}}
-                <a href="{{product_link}}" target="_blank" rel="noopener">
-                  {{product_name}}
-                </a>
-              {{else}}
-                {{product_name}}
-              {{/if}}
-            </td>
-
-            <td>{{date created_at}}</td>
-            <td>{{date delivery_date}}</td>
-            
-            <td>{{quantity}}</td>
-            <td>{{unit_price}}</td>
-            <td>{{multiply unit_price quantity}}</td>
-            <td>{{status}}</td>
-
-            <td>
-              {{#eq status "На рассмотрении"}}
-                <form action="/orders/cancel/{{id}}" method="post" style="display:inline">
-                  <button class="btn-cancel" title="Отменить">
-                    <i class="fa-solid fa-xmark"></i>
-                  </button>
-                </form>
-              
-              {{/eq}}
-            </td>
-
-          </tr>
+        <tr>
+          <td>
+            {{#if product_link}}
+              <a href="{{product_link}}" target="_blank" rel="noopener">{{product_name}}</a>
+            {{else}}
+              {{product_name}}
+            {{/if}}
+          </td>
+          <td>{{date created_at}}</td>
+          <td>{{date delivery_date}}</td>
+          <td>{{quantity}}</td>
+          <td>{{unit_price}}</td>
+          <td>{{multiply unit_price quantity}}</td>
+          <td>{{status}}</td>
+          <td class="action-cell">
+            {{#eq status "На рассмотрении"}}
+              <!-- редактировать ссылку и дату -->
+              <button
+                type="button"
+                class="btn-edit"
+                data-id="{{id}}"
+                data-link="{{product_link}}"
+                data-date="{{delivery_date}}"
+                onclick="openUserEditModal(this)"
+                title="Изменить ссылку и дату">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+              <!-- отменить заказ -->
+              <form action="/orders/cancel/{{id}}" method="post" class="cancel-form">
+                <button class="btn-cancel" title="Отменить">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </form>
+            {{else}}
+              —
+            {{/eq}}
+          </td>
+        </tr>
         {{/each}}
       </tbody>
     </table>
   </div>
 
-  
-</div>
-
-
-  
-  <div id="editModal" class="modal">
+  <!-- Модал для пользовательского редактирования -->
+  <div id="userEditModal" class="modal">
     <div class="modal-content">
-      <span class="close" onclick="closeModal()">&times;</span>
-
-      <form id="editForm" action="/orders/edit" method="post">
-        <input type="hidden" name="orderId" id="editId">
-
-        <label>Товар
-          <input type="text"   name="product_name" id="editProduct" required>
+      <span class="close" onclick="closeUserEditModal()">&times;</span>
+      <form id="userEditForm" method="post">
+        <label>Ссылка на товар
+          <input type="url" name="product_link" id="modalLink" required>
         </label>
-
-        <label>Кол-во
-          <input type="number" name="quantity"     id="editQty"     min="1" required>
+        <label>Желаемая дата доставки
+          <input type="date" name="delivery_date" id="modalDate" required>
         </label>
-
-        <label>Цена (₽)
-          <input type="number" name="unit_price"   id="editPrice"   step="0.01" min="0" required>
-        </label>
-
-        <label>Ссылка
-          <input type="url"    name="product_link" id="editLink">
-        </label>
-
-        <label>Дата доставки
-          <input type="date"   name="delivery_date" id="editDate" required>
-        </label>
-
         <button type="submit" class="btn-submit">Сохранить</button>
       </form>
     </div>
   </div>
 
+  <!-- Подтверждение отмены -->
+  <div id="confirmModal" class="modal">
+    <div class="modal-content">
+      <p>Вы уверены, что хотите отменить заказ?</p>
+      <div style="display:flex; gap:1rem; justify-content:flex-end; margin-top:1rem;">
+        <button id="confirmYes" class="btn-sec">Да</button>
+        <button id="confirmNo" class="btn-cancel">Нет</button>
+      </div>
+    </div>
+  </div>
+
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // — Открытие/закрытие модала редактирования
+  window.openUserEditModal = function(btn) {
+    const id   = btn.dataset.id;
+    const link = btn.dataset.link;
+    const date = btn.dataset.date;
+    document.getElementById('modalLink').value = link || '';
+    document.getElementById('modalDate').value = date ? date.split('T')[0] : '';
+    document.getElementById('modalDate').setAttribute('min', new Date().toISOString().slice(0,10));
+    document.getElementById('userEditForm').action = '/orders/update-user/' + id;
+    document.getElementById('userEditModal').style.display = 'flex';
+  };
+  window.closeUserEditModal = () => {
+    document.getElementById('userEditModal').style.display = 'none';
+  };
+
+  // Закрытие при клике вне
+  window.addEventListener('click', e => {
+    if (e.target === document.getElementById('userEditModal')) closeUserEditModal();
+  });
+
+  // — Подтверждение отмены заказа
+  let pendingForm = null;
+  const confirmModal = document.getElementById('confirmModal');
+  const btnYes = document.getElementById('confirmYes');
+  const btnNo  = document.getElementById('confirmNo');
+
+  document.querySelectorAll('.cancel-form').forEach(form => {
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      pendingForm = form;
+      confirmModal.style.display = 'flex';
+    });
+  });
+
+  btnYes.addEventListener('click', () => {
+    confirmModal.style.display = 'none';
+    pendingForm?.submit();
+    pendingForm = null;
+  });
+  btnNo.addEventListener('click', () => {
+    confirmModal.style.display = 'none';
+    pendingForm = null;
+  });
+  window.addEventListener('click', e => {
+    if (e.target === confirmModal) {
+      confirmModal.style.display = 'none';
+      pendingForm = null;
+    }
+  });
+});
+</script>

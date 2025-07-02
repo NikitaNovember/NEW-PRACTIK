@@ -1,303 +1,329 @@
-/* крестик-отмена */
-.btn-cancel{
-  background:none;
-  border:none;
-  color:#ff4d4d;          /* красный из палитры */
-  font-size:1rem;
-  cursor:pointer;
-  padding:0 .2rem;
+/* ══════════════════════════════════════════ */
+/* public/css/orders.css — полный файл стилей */
+/* ══════════════════════════════════════════ */
+
+/* крестик – отмена */
+.btn-cancel {
+  background: none;
+  border: none;
+  color: #ff4d4d;          /* красный из палитры */
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 .2rem;
 }
-.btn-cancel:hover{opacity:.75}
-
-
-.action-cell{
-  display:flex;
-  align-items:center;
-  gap:.6rem;                     /* расстояние между элементами */
-}
-
-
-.action-cell form{
-  display:flex;
-  align-items:center;
-  gap:.4rem;
+.btn-cancel:hover {
+  opacity: .75;
 }
 
-/* select фиксированной ширины */
-.action-cell select{
-  width:170px;
+/* контейнер для действий (селект + кнопка) */
+.action-cell {
+  display: flex;
+  align-items: center;
+  gap: .6rem;             /* расстояние между элементами */
+}
+.action-cell form {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
 }
 
-
-.action-cell button{
-  width:auto !important;        
-  padding:.4rem .9rem;
+/* селект фиксированной ширины */
+.action-cell select {
+  width: 170px;
+}
+/* кнопки внутри action-cell */
+.action-cell button {
+  width: auto !important;
+  padding: .4rem .9rem;
 }
 
+/* форма ETA (для админа) */
+.eta-form {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+.eta-form input {
+  background: #2c2c2b;
+  color: var(--text);
+  border: 1px solid var(--text-muted);
+  padding: .3rem .5rem;
+}
+.eta-form button {
+  width: auto !important;
+  padding: .35rem .7rem;
+}
 
-.eta-form{ display:flex; align-items:center; gap:.4rem; }
-.eta-form input{
-  background:#2c2c2b;
-  color:var(--text);
-  border:1px solid var(--text-muted);
-  padding:.3rem .5rem;
+/* селект в общей action-форме */
+.action-form select {
+  width: 170px;
+  padding: .35rem .55rem;
+  background: #232321;
+  color: var(--text);
+  border: 1px solid var(--text-muted);
+  border-radius: 3px;
 }
-.eta-form button{ width:auto !important; padding:.35rem .7rem; }
+.action-form select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
 
-
-.action-form select{
-  width:170px;
-  padding:.35rem .55rem;
-  background:#232321;
-  color:var(--text);
-  border:1px solid var(--text-muted);
-  border-radius:3px;
+/* общие кнопки */
+.btn-sec {
+  padding: .4rem .9rem;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
-.action-form select:focus{
-  outline:none;
-  border-color:var(--accent);
-}
-.btn-sec{
-  padding:.4rem .9rem;
-  background:var(--accent);
-  color:#000;
-  border:none;
-  border-radius:4px;
-  cursor:pointer;
-}
-.btn-arch{
-  padding:.4rem .9rem;
-  background:#4f00ff;     
-  color:#fff;
-  border:none;
-  border-radius:4px;
-  cursor:pointer;
+.btn-arch {
+  padding: .4rem .9rem;
+  background: #d43434;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 .btn-sec:hover,
-.btn-arch:hover{opacity:.8}
-
-
-
-
-.new-order-page{
-  max-width:500px;
-  margin:0 auto;
-}
-.order-form{
-  background:var(--card);
-  padding:2rem;
-  border-radius:8px;
-  display:flex;
-  flex-direction:column;
-  gap:1.25rem;
+.btn-arch:hover {
+  opacity: .8;
 }
 
-
-.order-form label{
-  display:flex;
-  flex-direction:column;
-  font-size:.9rem;
-  gap:.35rem;
+/* ═══ Новая заявка ═══ */
+.new-order-page {
+  max-width: 500px;
+  margin: 0 auto;
+}
+.order-form {
+  background: var(--card);
+  padding: 2rem;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.order-form label {
+  display: flex;
+  flex-direction: column;
+  font-size: .9rem;
+  gap: .35rem;
+}
+.order-form input {
+  padding: .55rem .75rem;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--text-muted);
+  color: var(--text);
+}
+.order-form input:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+.order-form .btn-submit {
+  margin-top: 1rem;
 }
 
-
-.order-form input{
-  padding:.55rem .75rem;
-  background:transparent;
-  border:none;
-  border-bottom:1px solid var(--text-muted);
-  color:var(--text);
+/* ═══ Страница заказов ═══ */
+.orders-page {
+  width: 100%;
+  max-width: 1200px;
+  margin: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
-.order-form input:focus{
-  outline:none;
-  border-bottom-color:var(--accent);
-}
-
-
-.order-form .btn-submit{
-  margin-top:1rem;
+.orders-title {
+  text-align: center;
+  margin: 0 0 1.5rem;
 }
 
-
-.orders-page{
-  width:100%;
-  max-width:1200px;
-  margin:auto;
-  padding:1rem;
-  display:flex;
-  flex-direction:column;
-  gap:1.5rem;
+/* контейнер для фильтров + кнопки */
+.orders-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 2rem 0 .2rem;
 }
 
-.orders-title{
-  text-align:center;
-  margin:0 0 1.5rem;
+/* ссылка-акцент для товара */
+:root {
+  --link: #5ea0ff;
+}
+.orders-table a {
+  color: var(--link);
+  text-decoration: underline;
+}
+.orders-table a:hover {
+  color: #d63131;
 }
 
-.orders-controls{
-  display:flex;
-  justify-content:space-between;   
-  align-items:flex-end;
-  flex-wrap:wrap;
-  gap:1rem;
-  margin:2rem 0 .2rem;             
-}
-
-:root{
-  
-  --link:#5ea0ff;               
-}
-
-
-.orders-table a{
-  color:var(--link);
-  text-decoration:underline;
-}
-.orders-table a:hover{
-  color:#d63131;                /* чуть светлее при наведении */
-}
-
-/* стили чек-листа */
-.status-sort{
-  display:flex;
-  align-items:flex-end;
-  flex-wrap:wrap;
-  gap:.65rem;
-}
-.status-label{
-  font-size:.8rem;
-  color:var(--text-muted);
-}
-.status-sort select{
-  width:180px;
-  padding:.35rem .6rem;
-  background:#181818;             
-  color:var(--text);            
-  border:1px solid #292929;
-  border-radius:2px;
-  appearance:none;              
-}
-
-.status-sort select::-ms-expand{display:none}     
-.status-sort select::-webkit-scrollbar{width:0}   
-
-.status-sort select option{
-  background:#1f1f1f;
-  color:var(--text);
-}
-
-.status-sort select:focus{
-  outline:none;
-  border-bottom-color:var(--accent);
-}
-
-
-.orders-header{
-  position:relative;
-  margin-bottom:1.75rem;
-  text-align:center;          
-}
-
-.orders-header .btn-add{
-  position:absolute;
-  top:370%;
-  right:0;
-  transform:translateY(-50%);
-}
-
-
-.status-field{display:flex;flex-direction:column}
-.status-field label{
-  font-size:.8rem;
-  margin-bottom:.25rem;
-  color:var(--text-muted);
-}
-
-
-.status-field select{
-  width:180px;
-  padding:.35rem .6rem;
-  background:transparent;
-  border:none;
-  border-bottom:1px solid var(--text-muted);
-  color:var(--text);
-}
-.status-field select:focus{outline:none;border-bottom-color:var(--accent)}
-
-
-.table-container{margin-top:1rem}
-
-
-.table-container{overflow-x:visible}
-
-
-.btn-edit{
-  background:none;
-  border:none;
-  color:var(--accent);
-  font-size:1rem;
-  cursor:pointer;
-}
-.btn-edit:hover{opacity:.7}
-
-
-.modal{
-  display:none;                       
-  position:fixed; inset:0;
-  background:rgba(0,0,0,.5);
-  backdrop-filter:blur(2px);
-  align-items:center; justify-content:center;
-  z-index:1000;
-}
-.modal-content{
-  width:100%; max-width:380px;
-  background:var(--card);
-  padding:1.5rem 2rem;
-  border-radius:8px;
-  position:relative;
-}
-.modal .close{
-  position:absolute; top:.6rem; right:.8rem;
-  font-size:1.5rem; cursor:pointer;
-}
-.modal label{display:block;font-size:.9rem;margin:.75rem 0 .35rem}
-.modal input{
-  width:100%; padding:.55rem .75rem;
-  background:#1f1f1f;
-  border:none; border-bottom:1px solid #444;
-  color:var(--text);
-}
-.modal input:focus{outline:none;border-bottom-color:#888}
-.modal button{margin-top:1rem}
-
-
-
-/* ───── адаптив ───────────────────────────────────────── */
-@media(max-width:600px){
-  .orders-controls{flex-direction:column;align-items:stretch}
-  .btn-add{align-self:flex-end}    
-}
-
-/* отменяем горизонтальный скролл */
+/* стили для самих таблиц */
 .table-container {
-  overflow-x: visible;
+  margin-top: 1rem;
+  overflow-x: visible;      /* убираем горизонтальный скролл */
 }
-
-/* пусть таблица остаётся 100%, но без ужатия шрифта */
 .orders-table {
-  table-layout: auto;
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card);
+  table-layout: auto;       /* чтобы ячейки не ужимались */
 }
-
-/* только название товара может переноситься */
-.orders-table td.product-col {
-  max-width: 200px;          /* или 180px — подогнайте под макет */
-  white-space: normal;       /* разрешаем перенос */
-  word-break: break-word;    /* разрываем длинные слова */
-}
-
-/* чуть скорректируем отступы */
 .orders-table th,
 .orders-table td {
-  padding: .6rem .8rem;
+  padding: .6rem .8rem;     /* чуть скорректированные отступы */
+  border-bottom: 1px solid #333;
+  text-align: left;
+}
+.orders-table th {
+  background: #2d2d2d;
 }
 
+/* позволя́ем переносить только название товара */
+.orders-table td.product-col {
+  max-width: 200px;          /* подгоняйте под макет */
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* кнопка редактирования в таблице */
+.btn-edit {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 1rem;
+  cursor: pointer;
+}
+.btn-edit:hover {
+  opacity: .7;
+}
+
+/* модальные окна */
+.modal {
+  display: none;             /* показывается скриптом */
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  backdrop-filter: blur(2px);
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-content {
+  width: 100%;
+  max-width: 380px;
+  background: var(--card);
+  padding: 1.5rem 2rem;
+  border-radius: 8px;
+  position: relative;
+}
+.modal .close {
+  position: absolute;
+  top: .6rem;
+  right: .8rem;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+.modal label {
+  display: block;
+  font-size: .9rem;
+  margin: .75rem 0 .35rem;
+}
+.modal input {
+  width: 100%;
+  padding: .55rem .75rem;
+  background: #1f1f1f;
+  border: none;
+  border-bottom: 1px solid #444;
+  color: var(--text);
+}
+.modal input:focus {
+  outline: none;
+  border-bottom-color: #888;
+}
+.modal button {
+  margin-top: 1rem;
+}
+
+/* ═══ Чек-лист статусов (старый, для <select>) ═══ */
+.status-label {
+  font-size: .8rem;
+  color: var(--text-muted);
+}
+.status-sort select {
+  width: 180px;
+  padding: .35rem .6rem;
+  background: #181818;
+  color: var(--text);
+  border: 1px solid #292929;
+  border-radius: 2px;
+  appearance: none;
+}
+.status-sort select::-ms-expand {
+  display: none;
+}
+.status-sort select::-webkit-scrollbar {
+  width: 0;
+}
+.status-sort select option {
+  background: #1f1f1f;
+  color: var(--text);
+}
+.status-sort select:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+
+/* ═══ Новый блок фильтра «Пользователь (логин)» ═══ */
+.status-sort {
+  display: inline-flex;        /* столбиком, по ширине контента */
+  flex-direction: column;      /* сначала label, потом input, потом кнопка */
+  align-items: flex-start;     /* прижать к левому краю */
+  gap: .25rem;                 /* расстояние между label-input-button */
+  margin-bottom: 1rem;         /* отступ перед таблицей */
+}
+.status-sort .status-label {
+  margin: 0;                   /* убираем стандартные отступы */
+  font-size: .85rem;           /* чуть помельче */
+}
+.status-sort input[type="text"],
+.status-field input[type="text"] {
+  background: #181818;
+  color: var(--text);
+  border: 1px solid #292929;
+  border-radius: 4px;
+  padding: .35rem .6rem;
+  width: 200px;                /* совпадает с кнопкой ниже */
+  outline: none;
+}
+.status-sort .btn-sec {
+  width: 200px;                /* такая же ширина, как у input */
+  padding: .35rem .6rem;
+  margin: 0;
+  text-align: center;
+}
+.status-sort input:focus,
+.status-sort .btn-sec:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+/* в форме нового заказа — только кнопка «Отмена» ниже */
+.new-order-page .form-actions .btn-cancel {
+  margin-top: 0.8rem; /* поднимайте/опускайте это значение под макет */
+}
+
+
+/* ───── Адаптив ───────────────────────────────────────── */
+@media(max-width:600px){
+  .orders-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .btn-add {
+    align-self: flex-end;
+  }
+}

@@ -27,7 +27,15 @@
           <tr>
             <td>{{id}}</td>
             <td>{{customer_name}}</td>
-            <td>{{product_name}}</td>
+            <td>
+              {{#if product_link}}
+                <a href="{{product_link}}" target="_blank" rel="noopener">
+                  {{product_name}}
+                </a>
+              {{else}}
+                {{product_name}}
+              {{/if}}
+            </td>
             <td>{{quantity}}</td>
             <td>{{unit_price}}</td>
             <td>{{multiply unit_price quantity}}</td>

@@ -1,8 +1,7 @@
 {{!-- views/activeOrders.hbs --}}
-
 <div class="orders-page">
 
-  <h2>Активные заказы</h2>
+  <h2 class="orders-title">Активные заказы</h2>
 
   <div class="admin-nav">
     <a href="/orders/archive" class="btn-sec">Архив заказов</a>
@@ -10,7 +9,7 @@
   </div>
 
   {{!-- фильтр по логину пользователя --}}
-  <form method="get" action="/orders/active" class="status-sort" style="margin-bottom:1rem;">
+  <form method="get" action="/orders/active" class="status-sort">
     <label for="login" class="status-label">Пользователь (логин):</label>
     <input
       type="text"
@@ -38,7 +37,7 @@
           <th>Создан</th>
           <th>Ожидается</th>
           <th>Статус</th>
-          <th>Действия</th>
+          <th>Действие</th>
         </tr>
       </thead>
       <tbody>
@@ -46,19 +45,24 @@
           <tr>
             <td>{{id}}</td>
             <td>{{user_login}}</td>
-            <td>{{product_name}}</td>
+            <td>
+              {{#if product_link}}
+                <a href="{{product_link}}" target="_blank" rel="noopener">
+                  {{product_name}}
+                </a>
+              {{else}}
+                {{product_name}}
+              {{/if}}
+            </td>
+
             <td>{{quantity}}</td>
             <td>{{unit_price}}</td>
             <td>{{multiply unit_price quantity}}</td>
             <td>{{date created_at}}</td>
             <td>{{date delivery_date}}</td>
             <td>{{status}}</td>
-
             <td class="action-cell">
-              {{!-- смена статуса --}}
-              <form action="/orders/update-status/{{id}}"
-                    method="post"
-                    class="action-form">
+              <form action="/orders/update-status/{{id}}" method="post" class="action-form">
                 <select name="status">
                   <option value="На рассмотрении"   {{#eq status "На рассмотрении"}}selected{{/eq}}>На рассмотрении</option>
                   <option value="Закупаем"          {{#eq status "Закупаем"}}selected{{/eq}}>Закупаем</option>
@@ -68,15 +72,17 @@
                   <option value="Получено"          {{#eq status "Получено"}}selected{{/eq}}>Получено</option>
                   <option value="Отменено"          {{#eq status "Отменено"}}selected{{/eq}}>Отменено</option>
                 </select>
+                 <button type="button" class="btn-edit"
+                        onclick="openAdminEditModal(
+                          {{id}},
+                          '{{product_link}}',
+                          '{{delivery_date}}',
+                          {{unit_price}}
+                        )"
+                        title="Правка цены/ссылки/даты">
+                  <i class="fa-solid fa-pen"></i>
+                  </button>
                 <button type="submit" class="btn-sec">OK</button>
-              </form>
-
-              {{!-- сразу в архив --}}
-              <form action="/orders/update-status/{{id}}"
-                    method="post"
-                    class="action-form">
-                <input type="hidden" name="status" value="Завершен">
-                <button type="submit" class="btn-arch">В архив</button>
               </form>
             </td>
           </tr>
@@ -84,5 +90,49 @@
       </tbody>
     </table>
   </div>
-
+  <!-- Modal для админа: правка ссылки / даты / цены -->
+  <div id="adminEditModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeAdminEditModal()">&times;</span>
+      <form id="adminEditForm" method="post">
+        <label>Ссылка на товар
+          <input type="url"   name="product_link" id="adminLink" required>
+        </label>
+        <label>Желаемая дата доставки
+          <input type="date"  name="delivery_date" id="adminDate" required>
+        </label>
+        <label>Цена за единицу (₽)
+          <input type="number" step="0.01" min="1" name="unit_price" id="adminPrice" required>
+        </label>
+        <button type="submit" class="btn-submit">Сохранить</button>
+      </form>
+    </div>
+  </div>
 </div>
+
+
+<script>
+  function openAdminEditModal(id, link, date, price) {
+    const modal     = document.getElementById('adminEditModal');
+    const form      = document.getElementById('adminEditForm');
+    const linkInput = document.getElementById('adminLink');
+    const dateInput = document.getElementById('adminDate');
+    const priceInput= document.getElementById('adminPrice');
+    linkInput.value  = link || '';
+    priceInput.value = price ?? '';
+    const today = new Date().toISOString().slice(0,10);
+    dateInput.setAttribute('min', today);
+    dateInput.value = date ? date.split('T')[0] : today;
+    form.action = '/orders/update-admin/' + id;
+    modal.style.display = 'flex';
+  }
+  function closeAdminEditModal() {
+    document.getElementById('adminEditModal').style.display = 'none';
+  }
+  window.addEventListener('click', function(e) {
+    const modal = document.getElementById('adminEditModal');
+    if (e.target === modal) {
+      closeAdminEditModal();
+    }
+  });
+</script>

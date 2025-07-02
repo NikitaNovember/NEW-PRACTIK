@@ -2,44 +2,71 @@
   <h1 class="orders-title">Новый заказ</h1>
 
   <form action="/orders/new" method="post" class="order-form">
-    <label>ФИО заказчика
-      <input value="{{fullName}}" readonly>
+    <label>
+      ФИО заказчика
+      <input type="text" value="{{fullName}}" readonly>
       <input type="hidden" name="customer_name" value="{{fullName}}">
     </label>
 
-    <label>Телефон
-      <input value="{{userPhone}}" readonly>
+    <label>
+      Телефон
+      <input type="text" value="{{userPhone}}" readonly>
       <input type="hidden" name="customer_phone" value="{{userPhone}}">
     </label>
 
-
-
     <label>
       Название товара
-      <input type="text"       name="product_name"    required>
+      <input type="text" name="product_name" required minlength="1" maxlength="255" placeholder="1–255 символов">
     </label>
 
     <label>
       Количество
-      <input type="number"     name="quantity"        min="1" required>
+      <input
+        type="number"
+        name="quantity"
+        required
+        min="1"
+        max="10000"
+        placeholder="1–10000">
     </label>
 
     <label>
-      Цена за единицу
-      <input type="number"     name="unit_price"      step="0.01" min="0" required>
+      Цена за единицу (₽)
+      <input
+        type="number"
+        name="unit_price"
+        required
+        step="0.01"
+        min="1"
+        max="100000000"
+        placeholder="1–100 000 000">
     </label>
 
     <label>
       Ссылка на товар
-      <input type="url"        name="product_link">
+      <input
+        type="url"
+        name="product_link"
+        maxlength="32767"
+        placeholder="До 32767 символов">
     </label>
 
-    <label>Желаемая дата доставки
-      <input name="delivery_date"
-            type="date"
-            min="{{today}}" required>        <!-- нельзя выбрать вчера -->     
+    <label>
+      Желаемая дата доставки
+      <input
+        type="date"
+        name="delivery_date"
+        required
+        min="{{today}}">
     </label>
 
-    <button type="submit" class="btn-submit">Отправить</button>
+    <div class="form-actions" style="display:flex; gap:1rem; margin-top:1.5rem;">
+      <button type="submit" class="btn-submit">Отправить</button>
+      <a href="/orders/my"
+         class="btn-cancel"
+         style="align-self:center; color:#ff4d4d; padding:.4rem .9rem; text-decoration:none;">
+        Отмена
+      </a>
+    </div>
   </form>
 </div>

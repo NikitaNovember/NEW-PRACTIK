@@ -19,7 +19,10 @@ import {
   getAllUsers,
   updateOrderETA,
   getOrderByIdAndUser,
-  updateOrderLinkAndDate,        
+  updateOrderLinkAndDate,   
+  updateUserPassword,
+  deleteUser,
+  updateOrderAdmin,
 } from './vendor/db.mjs';
 
 const allowedStatuses = [
@@ -103,8 +106,8 @@ app.post('/login', async (req, res) => {
   if (!login || !password) return res.render('auth/login', { title: 'Вход',isLoginPage: true, error: 'Заполните все поля' });
 
   const user = await getUserByLogin(login);
-  if (!user) return res.render('auth/login', { title: 'Вход', error: 'Пользователь не найден' });
-  if (user.password !== password) return res.render('auth/login', { title: 'Вход', error: 'Неверный пароль' });
+  if (!user) return res.render('auth/login', { title: 'Вход', isLoginPage: true, error: 'Пользователь не найден' });
+  if (user.password !== password) return res.render('auth/login', { title: 'Вход', isLoginPage: true, error: 'Неверный пароль' });
 
   req.session.user = { id: user.id, name: user.name, surname: user.surname, patronymic: user.patronymic, phone: user.phone,  role: user.role };
   res.redirect(user.role === 'admin' ? '/orders/active' : '/orders/my');
@@ -141,6 +144,7 @@ app.get('/orders/my', isAuth, async (req, res) => {
 app.get('/orders/new', isAuth, (_req, res) => {
   const today = new Date().toISOString().slice(0, 10);   // YYYY-MM-DD
   const fullName = `${_req.session.user.surname} ${_req.session.user.name} ${_req.session.user.patronymic}`.trim();
+
   res.render('newOrder', { 
   title: 'Новый заказ',
   isOrdersPage: true,
@@ -153,6 +157,33 @@ app.get('/orders/new', isAuth, (_req, res) => {
 app.post('/orders/new', isAuth, async (req, res) => {
   const rxFio = /^[А-Яа-яЁё\s\-]{5,60}$/;
   const rxPhone = /^\+7\d{10}$/;
+  const {
+    customer_name,
+    customer_phone,
+    product_name,
+    quantity,
+    unit_price,
+    product_link,
+    delivery_date
+  } = req.body;
+
+  if (!product_name || product_name.length < 1 || product_name.length > 255) {
+    return res.status(400).send('Название товара: от 1 до 255 символов');
+  }
+  
+  const qty = Number(quantity);
+  if (!Number.isInteger(qty) || qty < 1 || qty > 10000) {
+    return res.status(400).send('Количество: целое число от 1 до 10000');
+  }
+
+  if (product_link && product_link.length > 32767) {
+    return res.status(400).send('Ссылка на товар: не более 32767 символов');
+  }
+
+  const price = Number(unit_price);
+  if (isNaN(price) || price < 1 || price > 100_000_000) {
+    return res.status(400).send('Цена: от 1 до 100 000 000');
+  }
 
   if (!rxFio.test(req.body.customer_name)) {
     return res.status(400).send('ФИО должно содержать только русские буквы, пробелы и дефис.');
@@ -194,6 +225,9 @@ app.post('/orders/update-user/:id', isAuth, async (req, res) => {
   res.redirect('/orders/my');
 });
 
+app.get('/orders/update-status/:id', isAuth, isAdmin, (req, res) => {
+  res.redirect('/orders/active');
+});
 
 // app.js
 app.get('/orders/active', isAuth, isAdmin, async (req, res) => {
@@ -246,10 +280,48 @@ app.get('/orders/edit/:id', isAuth, async (req, res) => {
   res.render('editOrder', { title: 'Редактировать заказ', order });
 });
 
-app.get('/admin/users', isAuth, isAdmin, async (_req, res) => {
-  res.render('adminUsers', { title: 'БД пользователей',isOrdersPage: true, users: await getAllUsers() });
+app.get('/admin/users', isAuth, isAdmin, async (req, res) => {
+  const loginFilter = req.query.login?.trim() || null;
+  const users = await getAllUsers(loginFilter);
+  res.render('adminUsers', {
+    title: 'БД пользователей',
+    users,
+    loginFilter,
+    isOrdersPage: true
+  });
 });
 
+// Изменить пароль
+app.post('/admin/users/:id/password', isAuth, isAdmin, async (req, res) => {
+  const { password } = req.body;
+  await updateUserPassword(req.params.id, password);
+  res.redirect('/admin/users');
+});
+
+// Удалить пользователя
+app.post('/admin/users/:id/delete', isAuth, isAdmin, async (req, res) => {
+  await deleteUser(req.params.id);
+  res.redirect('/admin/users');
+});
+
+app.post('/orders/update-admin/:id', isAuth, isAdmin, async (req, res) => {
+  const { product_link, delivery_date, unit_price } = req.body;
+  const todayTs = new Date().setHours(0,0,0,0);
+  if (new Date(delivery_date).getTime() < todayTs) {
+    return res.status(400).send('Дата доставки не может быть в прошлом');
+  }
+  if (Number(unit_price) < 0) {
+    return res.status(400).send('Цена не может быть отрицательной');
+  }
+
+  await updateOrderAdmin (
+    req.params.id,
+    product_link,
+    delivery_date,
+    unit_price
+  );
+  res.redirect('/orders/active');
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`http://localhost:${PORT}`));

@@ -13,6 +13,23 @@ const pool = mysql.createPool({
   connectionLimit: 10
 });
 
+
+export async function getAllUsers(loginFilter = null) {
+  let sql = 'SELECT id, name, login, role FROM users';
+  const params = [];
+  if (loginFilter) {
+    sql += ' WHERE login LIKE ?';
+    params.push(`%${loginFilter}%`);
+  }
+  sql += ' ORDER BY id';
+  const [rows] = await pool.query(sql, params);
+  return rows;
+}
+
+export async function updateUserPassword(id, newPassword) {
+  await pool.query('UPDATE users SET password = ? WHERE id = ?', [newPassword, id]);
+}
+
 export async function getUserByLogin(login) {
     const [r] = await pool.query(
       `SELECT id, name, surname, patronymic, phone, role, password
@@ -117,9 +134,25 @@ export async function getOrderByIdAndUser(oid, uid) {
   );
   return r[0] ?? null;
 }
-export async function getAllUsers() {
-  const [rows] = await pool.query('SELECT id, name, login, role FROM users ORDER BY id');
-  return rows;
+
+
+export async function deleteUser(id) {
+  await pool.query(
+    'DELETE FROM users WHERE id = ?',
+    [id]
+  );
 }
 
-
+/**
+ * Правка админом: ссылка, дата и цена за единицу
+ */
+export async function updateOrderAdmin(oid, link, date, price) {
+  await pool.query(
+    `UPDATE orders
+       SET product_link  = ?,
+           delivery_date = ?,
+           unit_price    = ?
+     WHERE id = ?`,
+    [link, date, price, oid]
+  );
+}

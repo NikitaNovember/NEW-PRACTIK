@@ -61,6 +61,7 @@
                 data-id="{{id}}"
                 data-link="{{product_link}}"
                 data-date="{{delivery_date}}"
+                data-price="{{unit_price}}"
                 onclick="openUserEditModal(this)"
                 title="Изменить ссылку и дату">
                 <i class="fa-solid fa-pen"></i>
@@ -87,10 +88,29 @@
       <span class="close" onclick="closeUserEditModal()">&times;</span>
       <form id="userEditForm" method="post">
         <label>Ссылка на товар
-          <input type="url" name="product_link" id="modalLink" required>
+          <input
+            type="url"
+            name="product_link"
+            id="modalLink"
+            maxlength="32767"
+            required>
         </label>
         <label>Желаемая дата доставки
-          <input type="date" name="delivery_date" id="modalDate" required>
+          <input
+            type="date"
+            name="delivery_date"
+            id="modalDate"
+            required
+            min="">
+        </label>
+        <label>Цена за единицу (₽)
+          <input
+            type="number"
+            name="unit_price"
+            id="modalPrice"
+            required
+            min="1" max="100000000"
+            step="0.01">
         </label>
         <button type="submit" class="btn-submit">Сохранить</button>
       </form>
@@ -108,28 +128,49 @@
     </div>
   </div>
 
+  
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   // — Открытие/закрытие модала редактирования
   window.openUserEditModal = function(btn) {
-    const id   = btn.dataset.id;
-    const link = btn.dataset.link;
-    const date = btn.dataset.date;
-    document.getElementById('modalLink').value = link || '';
-    document.getElementById('modalDate').value = date ? date.split('T')[0] : '';
-    document.getElementById('modalDate').setAttribute('min', new Date().toISOString().slice(0,10));
-    document.getElementById('userEditForm').action = '/orders/update-user/' + id;
-    document.getElementById('userEditModal').style.display = 'flex';
+    const id    = btn.dataset.id;
+    const link  = btn.dataset.link;
+    const date  = btn.dataset.date;
+    const price = btn.dataset.price;
+
+    const linkInput  = document.getElementById('modalLink');
+    const dateInput  = document.getElementById('modalDate');
+    const priceInput = document.getElementById('modalPrice');
+    const form       = document.getElementById('userEditForm');
+    const modal      = document.getElementById('userEditModal');
+
+    // Заполнение полей
+    linkInput.value  = link || '';
+    dateInput.value  = date ? date.split('T')[0] : '';
+    priceInput.value = price || '';
+
+    // Ограничения
+    const today = new Date().toISOString().slice(0,10);
+    dateInput.setAttribute('min', new Date().toISOString().slice(0,10));
+    priceInput.setAttribute('min', '0');
+    priceInput.setAttribute('step', '0.01');
+
+    // Подготовка формы
+    form.action = '/orders/update-user/' + id;
+    modal.style.display = 'flex';
   };
+
   window.closeUserEditModal = () => {
     document.getElementById('userEditModal').style.display = 'none';
   };
 
   // Закрытие при клике вне
   window.addEventListener('click', e => {
-    if (e.target === document.getElementById('userEditModal')) closeUserEditModal();
+    if (e.target === document.getElementById('userEditModal')) {
+      closeUserEditModal();
+    }
   });
 
   // — Подтверждение отмены заказа
@@ -163,3 +204,4 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 </script>
+

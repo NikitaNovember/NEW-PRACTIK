@@ -48,10 +48,10 @@
             <td>
               {{#if product_link}}
                 <a href="{{product_link}}" target="_blank" rel="noopener">
-                  {{product_name}}
+                  {{truncate product_name 10}}
                 </a>
               {{else}}
-                {{product_name}}
+                {{truncate product_name 10}}
               {{/if}}
             </td>
 

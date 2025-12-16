@@ -4,7 +4,7 @@
     <div class="welcome-section">
       <h1>Добро пожаловать</h1>
       
-      <p>Кто обзывается - тот сам так называется</p>
+      <p>жёсткого отсоса :)</p>
     </div>
 
     <!-- карточка формы -->
@@ -12,26 +12,40 @@
       {{#if error}}
         <p class="error">{{error}}</p>
       {{/if}}
-
-      <form action="/login" method="post">
-        <div class="input-group">
-          <label for="login">Логин</label>
-            <i class="fa-solid fa-user input-icon"></i>        
-            <input id="login" name="login" type="text" placeholder="Логин" required>
+      {{#if cookies.user_id}}
+        <div class="already-auth">
+          <p>Вы уже авторизованы</p>
+          <a href="/orders/my" class="btn-submit">Перейти к заказам</a>
         </div>
-
-        <div class="input-group">
-          <label for="password">Пароль</label>
-          <i class="fa-solid fa-lock input-icon"></i>        
-          <div class="password-wrapper">
-            <input id="password" name="password" type="password" placeholder="Пароль" required>
-            <i class="fa-solid fa-eye toggle-password"></i>
+      {{else}}
+        <form action="/login" method="post">
+          <div class="input-group">
+            <label for="login">Логин</label>
+              <i class="fa-solid fa-user input-icon"></i>        
+              <input id="login" name="login" type="text" placeholder="Логин" required>
           </div>
-        </div>
+
+          <div class="input-group">
+            <label for="password">Пароль</label>
+            <i class="fa-solid fa-lock input-icon"></i>        
+            <div class="password-wrapper">
+              <input id="password" name="password" type="password" placeholder="Пароль" required>
+              <i class="fa-solid fa-eye toggle-password"></i>
+            </div>
+          </div>
 
 
-        <button type="submit" class="btn-submit">Войти</button>
-      </form>
+          <button type="submit" class="btn-submit">Войти</button>
+          <a class="btn-submit" href="/auth/mailru" style="display:block; text-align:center; text-decoration:none; margin-top:10px;">
+            Войти через Mail.ru
+          </a>
+
+          <p class="note">
+            Нет аккаунта? <a href="/register" style="color:#fff;">Зарегистрироваться</a>
+          </p>
+
+        </form>
+      {{/if}}
     </div>
   </div>
 </div>

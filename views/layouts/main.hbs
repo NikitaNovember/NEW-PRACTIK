@@ -31,15 +31,16 @@
     <header>
       <nav>
         <ul>
-          {{#if session.user}}
+          {{#if cookies.user_id}}
             <li><a href="/orders/my">Мои заказы</a></li>
+            <li><a href="/orders/my-archive">Архив</a></li>
 
             {{#eq session.user.role "admin"}}
               <li><a href="/orders/active">Активные заказы</a></li>
               <li><a href="/orders/archive">Архив</a></li>
             {{/eq}}
 
-            <li><a href="/profile">Профиль</a></li>
+            {{!-- <li><a href="/profile">Профиль</a></li> --}}
             <li><a href="/logout">Выйти</a></li>
           {{else}}
             <li><a href="/login">Выйти</a></li>

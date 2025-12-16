@@ -1,0 +1,56 @@
+<div class="orders-page">
+
+  <h1 class="orders-title">Архив заказов</h1>
+
+  <div class="orders-controls" style="justify-content:flex-end;">
+    <a href="/orders/my" class="btn-sec">К активным заказам</a>
+  </div>
+
+  <div class="table-container">
+    <table class="orders-table">
+      <thead>
+        <tr>
+          <th>Товар</th>
+          <th>Создан</th>
+          <th>Ожидается</th>
+          <th>Кол-во</th>
+          <th>Цена ₽</th>
+          <th>Сумма ₽</th>
+          <th>Статус</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each orders}}
+          <tr>
+            <td>
+              {{#if product_link}}
+                <a href="{{product_link}}" target="_blank" rel="noopener" title="{{product_name}}">
+                  {{truncate product_name 20}}
+                </a>
+              {{else}}
+                <span title="{{product_name}}">
+                  {{truncate product_name 20}}
+                </span>
+              {{/if}}
+            </td>
+            <td>{{date created_at}}</td>
+            <td>{{date delivery_date}}</td>
+            <td>{{quantity}}</td>
+            <td>{{unit_price}}</td>
+            <td>{{multiply unit_price quantity}}</td>
+            <td>{{status}}</td>
+          </tr>
+        {{/each}}
+
+        {{#unless orders.length}}
+          <tr>
+            <td colspan="7" style="padding:1rem; color:#aaa;">
+              Архив пуст
+            </td>
+          </tr>
+        {{/unless}}
+      </tbody>
+    </table>
+  </div>
+
+</div>

@@ -1,4 +1,3 @@
-
 import express from 'express';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
@@ -7,6 +6,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import expressHbs from 'express-handlebars';
 import dotenv from 'dotenv';
+import bcrypt from 'bcrypt';
+import axios from 'axios';
+import crypto from 'crypto';
+
 import {
   getUserByLogin,
   updateUserProfile,
@@ -23,6 +26,14 @@ import {
   updateUserPassword,
   deleteUser,
   updateOrderAdmin,
+  insertUser,
+  getUserById,
+  getActiveBanByUserId,
+  banUser,
+  unbanUser,
+  getArchiveOrdersByUser,
+  getUserByEmail,
+
 } from './vendor/db.mjs';
 
 const allowedStatuses = [
@@ -35,7 +46,7 @@ const allowedStatuses = [
   'Отменено'
 ];
 
-
+const SALT_ROUNDS = 10;
 
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
@@ -67,7 +78,13 @@ const hbs = expressHbs.create({
     },
 
     /* цена × количество → 2 знака после запятой */
-    multiply: (a, b) => (Number(a) * Number(b)).toFixed(2)
+    multiply: (a, b) => (Number(a) * Number(b)).toFixed(2),
+    truncate: (str, len) => {
+      if (typeof str !== 'string') return '';
+      return str.length > len
+        ? str.slice(0, len) + '…'
+        : str;
+    }
   }
 });
 
@@ -87,6 +104,26 @@ app.use(session({
   resave: false,
   saveUninitialized: false
 }));
+
+app.use(async (req, res, next) => {
+  if (!req.session.user && req.cookies.user_id) {
+    const user = await getUserById(req.cookies.user_id);
+
+    if (user) {
+      req.session.user = user;
+    }
+  }
+  next();
+});
+
+
+app.use((req, res, next) => {
+  res.locals.session = req.session;
+  res.locals.cookies = req.cookies;
+  next();
+});
+
+
 
 app.use('/fontawesome', express.static(
   path.join(__dirname, 'node_modules', '@fortawesome', 'fontawesome-free')
@@ -109,13 +146,193 @@ app.post('/login', async (req, res) => {
   if (!user) return res.render('auth/login', { title: 'Вход', isLoginPage: true, error: 'Пользователь не найден' });
   if (user.password !== password) return res.render('auth/login', { title: 'Вход', isLoginPage: true, error: 'Неверный пароль' });
 
-  req.session.user = { id: user.id, name: user.name, surname: user.surname, patronymic: user.patronymic, phone: user.phone,  role: user.role };
+  const ban = await getActiveBanByUserId(user.id);
+if (ban) {
+  const untilText = ban.banned_until
+    ? `до ${new Date(ban.banned_until).toLocaleString('ru-RU')}`
+    : 'навсегда';
+
+  return res.render('auth/login', {
+    title: 'Вход',
+    isLoginPage: true,
+    error: `Аккаунт заблокирован ${untilText}. Причина: ${ban.reason}`
+  });
+}
+
+  req.session.user = {
+  id: user.id,
+  name: user.name,
+  surname: user.surname,
+  patronymic: user.patronymic,
+  phone: user.phone,
+  role: user.role
+};
+
+
+
+// === COOKIE ===
+res.cookie('user_id', user.id, {
+  httpOnly: true,
+  maxAge: 1000 * 60 * 60 * 24 // 1 день
+});
+
+res.cookie('user_role', user.role, {
+  httpOnly: true,
+  maxAge: 1000 * 60 * 60 * 24
+});
+
   res.redirect(user.role === 'admin' ? '/orders/active' : '/orders/my');
 });
 
 
-app.get('/logout', (req, res) => req.session.destroy(() => res.redirect('/login')));
+app.get('/logout', (req, res) => {
+  res.clearCookie('user_id');
+  res.clearCookie('user_role');
 
+  req.session.destroy(() => {
+    res.redirect('/login');
+  });
+});
+
+// ===== РЕГИСТРАЦИЯ =====
+app.get('/register', (_req, res) => {
+  res.render('auth/register', { title: 'Регистрация', isLoginPage: true });
+});
+
+app.post('/register', async (req, res) => {
+  const rxName  = /^[А-Яа-яЁё\s\-]{2,50}$/;
+  const rxLogin = /^[a-zA-Z0-9_]{3,20}$/;
+  const rxPhone = /^\+7\d{10}$/;
+  const rxEmail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+  const {
+    name,
+    surname,
+    patronymic,
+    phone,
+    login,
+    email,
+    password,
+    password2
+  } = req.body;
+
+  // 1) базовая проверка обязательных полей
+  if (!name || !surname || !login || !password || !password2) {
+    return res.render('auth/register', {
+      title: 'Регистрация',
+      isLoginPage: true,
+      error: 'Заполните обязательные поля'
+    });
+  }
+
+  // 2) ФИО
+  if (!rxName.test(name) || !rxName.test(surname) || (patronymic && !rxName.test(patronymic))) {
+    return res.render('auth/register', {
+      title: 'Регистрация',
+      isLoginPage: true,
+      error: 'ФИО: только русские буквы, пробел и дефис'
+    });
+  }
+
+  // 3) телефон (у тебя он может быть NULL)
+  if (phone && !rxPhone.test(phone)) {
+    return res.render('auth/register', {
+      title: 'Регистрация',
+      isLoginPage: true,
+      error: 'Телефон: формат +7XXXXXXXXXX'
+    });
+  }
+
+  // 4) логин
+  if (!rxLogin.test(login)) {
+    return res.render('auth/register', {
+      title: 'Регистрация',
+      isLoginPage: true,
+      error: 'Логин: 3–20 символов (латиница, цифры, _)'
+    });
+  }
+
+  // 5) пароль
+  if (password.length < 4 || password.length > 50) {
+    return res.render('auth/register', {
+      title: 'Регистрация',
+      isLoginPage: true,
+      error: 'Пароль: 4–50 символов'
+    });
+  }
+
+  if (password !== password2) {
+    return res.render('auth/register', {
+      title: 'Регистрация',
+      isLoginPage: true,
+      error: 'Пароли не совпадают'
+    });
+  }
+
+  // 6) проверка уникальности логина
+  const exists = await getUserByLogin(login);
+  if (exists) {
+    return res.render('auth/register', {
+      title: 'Регистрация',
+      isLoginPage: true,
+      error: 'Логин уже занят'
+    });
+  }
+
+  if (!email || !rxEmail.test(email) || email.length > 255) {
+  return res.render('auth/register', {
+    title: 'Регистрация',
+    isLoginPage: true,
+    error: 'Email указан неверно'
+  });
+}
+
+const emailExists = await getUserByEmail(email);
+if (emailExists) {
+  return res.render('auth/register', {
+    title: 'Регистрация',
+    isLoginPage: true,
+    error: 'Email уже используется'
+  });
+}
+
+
+  // 7) хэширование
+  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+
+  // 8) запись в БД
+  const userId = await insertUser({
+    name,
+    surname,
+    patronymic,
+    phone,
+    login,
+    email,
+    password: passwordHash
+  });
+
+  // 9) автологин: session + cookie
+  req.session.user = {
+    id: userId,
+    name,
+    surname,
+    patronymic,
+    phone,
+    role: 'user'
+
+
+  };
+
+  res.cookie('user_id', userId, { httpOnly: true, maxAge: 1000 * 60 * 60 * 24 });
+  res.cookie('user_role', 'user', { httpOnly: true, maxAge: 1000 * 60 * 60 * 24 });
+
+  return res.redirect('/orders/my');
+});
+
+
+app.get('/register', (_req, res) => {
+  res.render('auth/register', { title: 'Регистрация', isLoginPage: true });
+});
 
 
 
@@ -140,6 +357,17 @@ app.get('/orders/my', isAuth, async (req, res) => {
     isOrdersPage: true
   });
 });
+
+app.get('/orders/my-archive', isAuth, async (req, res) => {
+  const orders = await getArchiveOrdersByUser(req.session.user.id);
+
+  res.render('myArchive', {
+    title: 'Архив заказов',
+    isOrdersPage: true,
+    orders
+  });
+});
+
 
 app.get('/orders/new', isAuth, (_req, res) => {
   const today = new Date().toISOString().slice(0, 10);   // YYYY-MM-DD
@@ -323,7 +551,178 @@ app.post('/orders/update-admin/:id', isAuth, isAdmin, async (req, res) => {
   res.redirect('/orders/active');
 });
 
+app.post('/admin/users/:id/ban', isAuth, isAdmin, async (req, res) => {
+  const userId = Number(req.params.id);
+  const adminId = req.session.user.id;
+
+  const reason = (req.body.reason || '').trim();
+  const duration = (req.body.duration || 'permanent').trim(); // permanent | 1 | 7 | 30 ...
+
+  if (!reason || reason.length > 500) {
+    return res.status(400).send('Причина бана: 1–500 символов');
+  }
+
+  let bannedUntil = null;
+  if (duration !== 'permanent') {
+    const days = Number(duration);
+    if (!Number.isInteger(days) || days < 1 || days > 3650) {
+      return res.status(400).send('Некорректный срок бана');
+    }
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    bannedUntil = d;
+  }
+
+  await banUser(userId, adminId, reason, bannedUntil);
+  res.redirect('/admin/users');
+});
+
+app.post('/admin/users/:id/unban', isAuth, isAdmin, async (req, res) => {
+  await unbanUser(req.params.id);
+  res.redirect('/admin/users');
+});
+
+// ===== Mail.ru OAuth =====
+app.get('/auth/mailru', (req, res) => {
+  console.log('MAILRU_REDIRECT_URI:', process.env.MAILRU_REDIRECT_URI);
+  const state = crypto.randomBytes(16).toString('hex');
+  req.session.mailru_oauth_state = state;
+
+  const redirectUri = process.env.MAILRU_REDIRECT_URI;
+  const clientId = process.env.MAILRU_CLIENT_ID;
+
+  const url =
+    `https://o2.mail.ru/login` +
+    `?response_type=code` +
+    `&client_id=${encodeURIComponent(clientId)}` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+    `&scope=${encodeURIComponent('userinfo')}` +
+    `&state=${encodeURIComponent(state)}`;
+
+  return res.redirect(url);
+});
+
+app.get('/auth/mailru/callback', async (req, res) => {
+  try {
+    const { code, state, error } = req.query;
+
+    if (error) return res.redirect('/login');
+
+    // проверяем state (защита от CSRF)
+    if (!state || state !== req.session.mailru_oauth_state) {
+      return res.status(400).send('Bad state');
+    }
+    req.session.mailru_oauth_state = null;
+
+    if (!code) return res.status(400).send('No code');
+
+    // 1) меняем code на access_token
+    const tokenResp = await axios.post(
+  'https://o2.mail.ru/token',
+  new URLSearchParams({
+    grant_type: 'authorization_code',
+    code: String(code),
+    redirect_uri: process.env.MAILRU_REDIRECT_URI,
+    client_id: process.env.MAILRU_CLIENT_ID,
+    client_secret: process.env.MAILRU_CLIENT_SECRET,
+  }).toString(),
+  {
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    }
+  }
+);
+
+
+    const accessToken = tokenResp.data?.access_token;
+    console.log('MAILRU TOKEN RESP:', tokenResp.data);
+    if (!accessToken) return res.status(400).send('No access_token');
+
+    const userInfoResp = await axios.get('https://o2.mail.ru/userinfo', {
+    params: {
+      access_token: accessToken,
+      client_id: process.env.MAILRU_CLIENT_ID,
+    },
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: 'application/json',
+    },
+    timeout: 10000,
+    validateStatus: () => true,
+  });
+
+  console.log('MAILRU USERINFO STATUS:', userInfoResp.status);
+  console.log('MAILRU USERINFO DATA:', userInfoResp.data);
+
+  if (userInfoResp.status !== 200) {
+    return res.redirect('/login?error=mailru_userinfo_failed');
+  }
+
+  const info = userInfoResp.data || {};
+
+
+    const email = info.email;
+    if (!email) return res.status(400).send('Mail.ru не вернул email');
+
+    // ✅ ИЩЕМ ПО EMAIL
+    let user = await getUserByEmail(email);
+
+    // ✅ ЕСЛИ НЕТ — СОЗДАЁМ
+    if (!user) {
+      const fullName = String(info.name || '').trim();
+      const firstName = String(info.first_name || '').trim();
+      const lastName = String(info.last_name || '').trim();
+
+      const name =
+        firstName ||
+        (fullName.split(' ')[1] || fullName.split(' ')[0] || 'Пользователь');
+
+      const surname =
+        lastName ||
+        (fullName.split(' ')[0] || 'MailRu');
+
+      await insertOAuthUserFromMailru({
+        email,
+        name,
+        surname
+      });
+
+      // получаем созданного пользователя
+      user = await getUserByEmail(email);
+    }
+
+    // 5) логиним в твою сессию как обычно
+    req.session.user = {
+      id: user.id,
+      name: user.name,
+      surname: user.surname,
+      patronymic: user.patronymic,
+      phone: user.phone,
+      role: user.role,
+    };
+
+    // 6) редирект по роли
+    return res.redirect(user.role === 'admin' ? '/orders/active' : '/orders/my');
+  } catch (e) {
+    console.error(e);
+    return res.redirect('/login');
+  }
+});
+
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`http://localhost:${PORT}`));
 
-// 
+/*
+PORT=3000
+DB_PORT=3407
+DB_HOST=platon.teyhd.ru
+DB_USER=student
+DB_PASS=studpass
+DB_NAME=Nikita_todo
+DB_CHARSET=utf8mb4_0900_ai_ci
+
+MAILRU_CLIENT_ID=019b28b8cc9973a9b641f63f0e12491f
+MAILRU_CLIENT_SECRET=019b28b8cc9973b4952bf827e9bdff58
+MAILRU_REDIRECT_URI=http://localhost:3000/auth/mailru/callback
+*/

@@ -31,6 +31,7 @@
           <th>Имя</th>
           <th>Логин</th>
           <th>Роль</th>
+          <th>Бан</th>
           <th>Действия</th>
         </tr>
       </thead>
@@ -62,6 +63,47 @@
               <button type="submit" class="btn-arch">Удалить</button>
             </form>
           </td>
+          <td>
+            {{#if ban_reason}}
+              <div style="display:flex; flex-direction:column; gap:.2rem;">
+                <span style="color:#ff6b6b; font-weight:600;">Забанен</span>
+                <span style="font-size:.85rem; color:#aaa;">
+                  {{#if ban_until}}
+                    до {{date ban_until}}
+                  {{else}}
+                    навсегда
+                  {{/if}}
+                </span>
+                <span style="font-size:.85rem; color:#aaa;">
+                  причина: {{truncate ban_reason 30}}
+                </span>
+
+                <form method="post" action="/admin/users/{{id}}/unban" class="action-form">
+                  <button type="submit" class="btn-sec">Разбанить</button>
+                </form>
+              </div>
+            {{else}}
+              <form method="post" action="/admin/users/{{id}}/ban" class="action-form" style="display:flex; gap:.4rem; flex-wrap:wrap;">
+                <input
+                  type="text"
+                  name="reason"
+                  placeholder="Причина"
+                  required
+                  maxlength="500"
+                  style="padding:.25rem .5rem; background:#232323; color:#fff; border:1px solid #444; border-radius:3px; width:180px;">
+
+                <select name="duration" style="padding:.25rem .5rem; background:#232323; color:#fff; border:1px solid #444; border-radius:3px;">
+                  <option value="permanent">Навсегда</option>
+                  <option value="1">1 день</option>
+                  <option value="7">7 дней</option>
+                  <option value="30">30 дней</option>
+                </select>
+
+                <button type="submit" class="btn-arch">Забанить</button>
+              </form>
+            {{/if}}
+          </td>
+
         </tr>
         {{/each}}
       </tbody>

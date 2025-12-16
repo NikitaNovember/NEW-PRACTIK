@@ -1,0 +1,63 @@
+<div class="login-page">
+  <div class="login-content">
+    <div class="welcome-section">
+      <h1>Регистрация</h1>
+      <p>Создайте аккаунт для оформления заявок</p>
+    </div>
+
+    <div class="login-card">
+      {{#if error}}
+        <p class="error">{{error}}</p>
+      {{/if}}
+
+      <form action="/register" method="post">
+        <div class="input-group">
+          <label>Имя</label>
+          <input name="name" type="text" required>
+        </div>
+
+        <div class="input-group">
+          <label>Фамилия</label>
+          <input name="surname" type="text" required>
+        </div>
+
+        <div class="input-group">
+          <label>Отчество</label>
+          <input name="patronymic" type="text">
+        </div>
+
+        <div class="input-group">
+          <label>Телефон (+7XXXXXXXXXX)</label>
+          <input name="phone" type="text" placeholder="+7XXXXXXXXXX">
+        </div>
+
+        <div class="input-group">
+          <label>Логин</label>
+          <input name="login" type="text" required>
+        </div>
+
+        <div class="input-group">
+            <label>Email</label>
+            <input name="email" type="email" required>
+        </div>
+
+
+        <div class="input-group">
+          <label>Пароль</label>
+          <input name="password" type="password" required>
+        </div>
+
+        <div class="input-group">
+          <label>Повтор пароля</label>
+          <input name="password2" type="password" required>
+        </div>
+
+        <button type="submit" class="btn-submit">Зарегистрироваться</button>
+      </form>
+
+      <p class="note" style="margin-top:14px;">
+        Уже есть аккаунт? <a href="/login" style="color:#fff;">Войти</a>
+      </p>
+    </div>
+  </div>
+</div>

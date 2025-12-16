@@ -32,3 +32,16 @@
 .btn-submit { background: #fff; color: #000; border: none; padding: 12px; font-size: 16px; cursor: pointer; border-radius: 4px; margin-top: 10px; }
 .btn-submit:hover { background: #e0e0e0; }
 .note { margin-top: 20px; font-size: 12px; color: #aaa; text-align: center; }
+
+.already-auth {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.already-auth .btn-submit {
+  text-decoration: none;
+  text-align: center;
+  width: 100%;
+}

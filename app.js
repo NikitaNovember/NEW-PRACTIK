@@ -1,5 +1,8 @@
+// app.js (полностью)
+// ВАЖНО: в ./vendor/db.mjs должны быть функции, которые тут импортируются.
+// Если какой-то функции нет — добавь/экспортируй её в db.mjs (я специально все использованные импорты собрала в одном месте).
+
 import express from 'express';
-import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import fileUpload from 'express-fileupload';
 import path from 'path';
@@ -11,86 +14,123 @@ import axios from 'axios';
 import crypto from 'crypto';
 
 import {
-  getUserByLogin,
-  updateUserProfile,
-  insertOrder,
-  getOrdersByUser,
-  editOrderByUser,
-  getActiveOrders,
-  getArchiveOrders,
-  updateOrderStatus,
-  getAllUsers,
-  updateOrderETA,
-  getOrderByIdAndUser,
-  updateOrderLinkAndDate,   
-  updateUserPassword,
-  deleteUser,
-  updateOrderAdmin,
-  insertUser,
-  getUserById,
-  getActiveBanByUserId,
-  banUser,
-  unbanUser,
-  getArchiveOrdersByUser,
-  getUserByEmail,
+	// users
+	getUserByLogin,
+	getUserByEmail,
+	insertUser,
 
+	// orders
+	insertOrder,
+	getOrdersByUser,
+	editOrderByUser,
+	getOrderByIdAndUser,
+	updateOrderLinkAndDate,
+	getActiveOrders,
+	getArchiveOrders,
+	getArchiveOrdersByUser,
+	updateOrderStatus,
+	updateOrderETA,
+	updateOrderAdmin,
+	updateOrderAdminAction,
+
+	// admin users
+	getAllUsers,
+	updateUserPassword,
+	deleteUser,
+
+	// bans
+	getActiveBanByUserId,
+	banUser,
+	unbanUser,
+
+	// db sessions
+	createDbSession,
+	getDbSessionBySelector,
+	revokeDbSession,
+
+	// oauth mailru
+	insertOAuthUserFromMailru,
 } from './vendor/db.mjs';
 
-const allowedStatuses = [
-  'На рассмотрении',
-  'Закупаем',
-  'Ждём поставку',
-  'Готов к получению',
-  'Пауза',
-  'Получено',
-  'Отменено'
-];
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const SALT_ROUNDS = 10;
 
-dotenv.config();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
+const allowedStatuses = [
+	'На рассмотрении',
+	'Закупаем',
+	'Ждём поставку',
+	'Готов к получению',
+	'Пауза',
+	'Получено',
+	'Отменено',
+];
 
-const hbs = expressHbs.create({
-  extname: '.hbs',
-  defaultLayout: 'main',
-  layoutsDir: path.join(__dirname, 'views', 'layouts'),
-  partialsDir: path.join(__dirname, 'views', 'partials'),
+const isProd = process.env.NODE_ENV === 'production';
 
-  /* ——— helpers ——— */
-  helpers: {
-    /* сравнение */
-      /* eq как inline-функция И блок-helper */
-    eq: function (a, b, options) {
-    /* если options (3-й аргумент) отсутствует → вызов inline */
-      if (arguments.length < 3) return a == b;
+function makeSessionToken() {
+	const selector = crypto.randomBytes(16).toString('hex'); // 32 chars
+	const validator = crypto.randomBytes(32).toString('base64url'); // удобно для cookie
+	return { selector, validator, cookieValue: `${selector}.${validator}` };
+}
 
-    /* вызов как блок */
-      return (a == b) ? options.fn(this) : options.inverse(this);
-  },
+function authCookieOptions(maxAgeMs) {
+	return {
+		httpOnly: true,
+		sameSite: 'lax',
+		secure: isProd, // в prod лучше true (https)
+		maxAge: maxAgeMs,
+	};
+}
 
-    /* dd-mm-yyyy */
-    date: iso => {
-      if (!iso) return '—';
-      const d = new Date(iso);
-      return d.toLocaleDateString('ru-RU').replace(/\./g, '-');
-    },
-
-    /* цена × количество → 2 знака после запятой */
-    multiply: (a, b) => (Number(a) * Number(b)).toFixed(2),
-    truncate: (str, len) => {
-      if (typeof str !== 'string') return '';
-      return str.length > len
-        ? str.slice(0, len) + '…'
-        : str;
+async function logoutByCookie(req, res) {
+  const raw = req.cookies?.auth_token;
+  if (raw) {
+    const [selector] = String(raw).split('.');
+    if (selector) {
+      try { await revokeDbSession(selector); } catch {}
     }
   }
+
+  res.clearCookie('auth_token', {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+  });
+}
+
+// ---------- Handlebars ----------
+const hbs = expressHbs.create({
+	extname: '.hbs',
+	defaultLayout: 'main',
+	layoutsDir: path.join(__dirname, 'views', 'layouts'),
+	partialsDir: path.join(__dirname, 'views', 'partials'),
+	helpers: {
+		eq: function (a, b, options) {
+			if (arguments.length < 3) return a == b;
+			return a == b ? options.fn(this) : options.inverse(this);
+		},
+		date: (iso) => {
+			if (!iso) return '—';
+			const d = new Date(iso);
+			return d.toLocaleDateString('ru-RU').replace(/\./g, '-');
+		},
+		multiply: (a, b) => (Number(a) * Number(b)).toFixed(2),
+		truncate: (str, len) => {
+			if (typeof str !== 'string') return '';
+			return str.length > len ? str.slice(0, len) + '…' : str;
+		},
+	},
 });
 
+// ---------- App ----------
 const app = express();
-app.use(express.static(path.join(__dirname, 'public')));
 
+app.use(express.static(path.join(__dirname, 'public')));
 app.engine('.hbs', hbs.engine);
 app.set('view engine', '.hbs');
 app.set('views', path.join(__dirname, 'views'));
@@ -99,630 +139,626 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use(fileUpload());
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'secret',
-  resave: false,
-  saveUninitialized: false
-}));
 
-app.use(async (req, res, next) => {
-  if (!req.session.user && req.cookies.user_id) {
-    const user = await getUserById(req.cookies.user_id);
+app.use('/fontawesome', express.static(path.join(__dirname, 'node_modules', '@fortawesome', 'fontawesome-free')));
 
-    if (user) {
-      req.session.user = user;
-    }
-  }
-  next();
-});
+// ---------- DB-token auth (мягкий) ----------
+// Выставляет req.user если токен валиден. Если токен битый — чистит cookie.
+// НЕ редиректит сам, чтобы можно было показывать login/register спокойно.
+async function authByDbTokenSoft(req, res, next) {
+	try {
+		req.user = null;
 
+		const raw = req.cookies?.auth_token;
+		if (!raw) return next();
 
-app.use((req, res, next) => {
-  res.locals.session = req.session;
-  res.locals.cookies = req.cookies;
-  next();
-});
+		const parts = String(raw).split('.');
+		if (parts.length !== 2) {
+			res.clearCookie('auth_token');
+			return next();
+		}
 
+		const [selector, validator] = parts;
+		if (!selector || !validator) {
+			res.clearCookie('auth_token');
+			return next();
+		}
 
+		const sess = await getDbSessionBySelector(selector);
+		if (!sess) {
+			res.clearCookie('auth_token');
+			return next();
+		}
 
-app.use('/fontawesome', express.static(
-  path.join(__dirname, 'node_modules', '@fortawesome', 'fontawesome-free')
-));
+		if (sess.revoked_at) {
+			res.clearCookie('auth_token');
+			return next();
+		}
 
+		if (!sess.expires_at || new Date(sess.expires_at) < new Date()) {
+			try {
+				await revokeDbSession(selector);
+			} catch {}
+			res.clearCookie('auth_token');
+			return next();
+		}
 
-const isAuth  = (req, _res, next) => req.session.user ? next() : _res.redirect('/login');
-const isAdmin = (req, res, next) => req.session.user?.role === 'admin' ? next() : res.status(403).send('Forbidden');
+		const ok = await bcrypt.compare(validator, sess.token_hash);
+		if (!ok) {
+			try {
+				await revokeDbSession(selector);
+			} catch {}
+			res.clearCookie('auth_token');
+			return next();
+		}
 
+		req.user = {
+			id: sess.uid,
+			role: sess.role,
+			name: sess.name,
+			surname: sess.surname,
+			patronymic: sess.patronymic,
+			phone: sess.phone,
+			email: sess.email,
+		};
 
-//-ЛОГИН
-app.get('/', (_req, res) => res.redirect('/login'));
-app.get('/login', (_req, res) => res.render('auth/login', { title: 'Вход', isLoginPage: true }));
-
-app.post('/login', async (req, res) => {
-  const { login, password } = req.body;
-  if (!login || !password) return res.render('auth/login', { title: 'Вход',isLoginPage: true, error: 'Заполните все поля' });
-
-  const user = await getUserByLogin(login);
-  if (!user) return res.render('auth/login', { title: 'Вход', isLoginPage: true, error: 'Пользователь не найден' });
-  if (user.password !== password) return res.render('auth/login', { title: 'Вход', isLoginPage: true, error: 'Неверный пароль' });
-
-  const ban = await getActiveBanByUserId(user.id);
-if (ban) {
-  const untilText = ban.banned_until
-    ? `до ${new Date(ban.banned_until).toLocaleString('ru-RU')}`
-    : 'навсегда';
-
-  return res.render('auth/login', {
-    title: 'Вход',
-    isLoginPage: true,
-    error: `Аккаунт заблокирован ${untilText}. Причина: ${ban.reason}`
-  });
+		return next();
+	} catch (e) {
+		console.error('authByDbTokenSoft error:', e);
+		res.clearCookie('auth_token');
+		return next();
+	}
 }
 
-  req.session.user = {
-  id: user.id,
-  name: user.name,
-  surname: user.surname,
-  patronymic: user.patronymic,
-  phone: user.phone,
-  role: user.role
-};
+app.use(authByDbTokenSoft);
 
-
-
-// === COOKIE ===
-res.cookie('user_id', user.id, {
-  httpOnly: true,
-  maxAge: 1000 * 60 * 60 * 24 // 1 день
+// Чтобы в шаблонах было доступно {{user}} и {{session.user}} (если ты где-то это используешь)
+app.use((req, res, next) => {
+	res.locals.user = req.user;
+	res.locals.cookies = req.cookies;
+	// совместимость с твоими шаблонами (где было session.user)
+	res.locals.session = { user: req.user };
+	next();
 });
 
-res.cookie('user_role', user.role, {
-  httpOnly: true,
-  maxAge: 1000 * 60 * 60 * 24
+function requireAuth(req, res, next) {
+	if (req.user) return next();
+	return res.redirect('/login');
+}
+
+function requireAdmin(req, res, next) {
+	if (req.user?.role === 'admin') return next();
+	return res.status(403).send('Forbidden');
+}
+
+// ---------- routes ----------
+
+// home -> login
+app.get('/', (_req, res) => res.redirect('/login'));
+
+// login page
+app.get('/login', (req, res) => {
+	if (req.user) {
+		return res.render('auth/login', {
+			title: 'Вход',
+			isLoginPage: true,
+			info: 'Вы уже авторизованы. Перейдите к заказам.',
+		});
+	}
+	return res.render('auth/login', { title: 'Вход', isLoginPage: true });
 });
 
-  res.redirect(user.role === 'admin' ? '/orders/active' : '/orders/my');
+// login submit (bcrypt + db session)
+app.post('/login', async (req, res) => {
+	const { login, password } = req.body;
+
+	if (!login || !password) {
+		return res.render('auth/login', { title: 'Вход', isLoginPage: true, error: 'Заполните все поля' });
+	}
+
+	const user = await getUserByLogin(login);
+	if (!user) {
+		return res.render('auth/login', { title: 'Вход', isLoginPage: true, error: 'Пользователь не найден' });
+	}
+
+	const passOk = await bcrypt.compare(password, user.password);
+	if (!passOk) {
+		return res.render('auth/login', { title: 'Вход', isLoginPage: true, error: 'Неверный пароль' });
+	}
+
+	const ban = await getActiveBanByUserId(user.id);
+	if (ban) {
+		const untilText = ban.banned_until ? `до ${new Date(ban.banned_until).toLocaleString('ru-RU')}` : 'навсегда';
+		return res.render('auth/login', {
+			title: 'Вход',
+			isLoginPage: true,
+			error: `Аккаунт заблокирован ${untilText}. Причина: ${ban.reason}`,
+		});
+	}
+
+	const { selector, validator, cookieValue } = makeSessionToken();
+	const tokenHash = await bcrypt.hash(validator, SALT_ROUNDS);
+
+	const expiresAt = new Date();
+	expiresAt.setDate(expiresAt.getDate() + 1);
+
+	await createDbSession({
+		userId: user.id,
+		selector,
+		tokenHash,
+		expiresAt,
+		ip: req.ip,
+		userAgent: req.get('user-agent') || null,
+	});
+
+	res.cookie('auth_token', cookieValue, authCookieOptions(1000 * 60 * 60 * 24));
+
+	return res.redirect(user.role === 'admin' ? '/orders/active' : '/orders/my');
+});
+
+app.get('/logout', async (req, res) => {
+  await logoutByCookie(req, res);
+  return res.redirect('/login');
 });
 
 
-app.get('/logout', (req, res) => {
-  res.clearCookie('user_id');
-  res.clearCookie('user_role');
 
-  req.session.destroy(() => {
-    res.redirect('/login');
-  });
+// ---------- register ----------
+app.get('/register', async (req, res) => {
+  await logoutByCookie(req, res);
+  return res.render('auth/register', { title: 'Регистрация', isLoginPage: true });
 });
 
-// ===== РЕГИСТРАЦИЯ =====
-app.get('/register', (_req, res) => {
-  res.render('auth/register', { title: 'Регистрация', isLoginPage: true });
-});
 
 app.post('/register', async (req, res) => {
-  const rxName  = /^[А-Яа-яЁё\s\-]{2,50}$/;
-  const rxLogin = /^[a-zA-Z0-9_]{3,20}$/;
-  const rxPhone = /^\+7\d{10}$/;
-  const rxEmail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+	const rxName = /^[А-Яа-яЁё\s\-]{2,50}$/;
+	const rxLogin = /^[a-zA-Z0-9_]{3,20}$/;
+	const rxPhone = /^\+7\d{10}$/;
+	const rxEmail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-  const {
-    name,
-    surname,
-    patronymic,
-    phone,
-    login,
-    email,
-    password,
-    password2
-  } = req.body;
+	const { name, surname, patronymic, phone, login, email, password, password2 } = req.body;
 
-  // 1) базовая проверка обязательных полей
-  if (!name || !surname || !login || !password || !password2) {
-    return res.render('auth/register', {
-      title: 'Регистрация',
-      isLoginPage: true,
-      error: 'Заполните обязательные поля'
-    });
-  }
+	if (!name || !surname || !login || !email || !password || !password2) {
+		return res.render('auth/register', { title: 'Регистрация', isLoginPage: true, error: 'Заполните обязательные поля' });
+	}
 
-  // 2) ФИО
-  if (!rxName.test(name) || !rxName.test(surname) || (patronymic && !rxName.test(patronymic))) {
-    return res.render('auth/register', {
-      title: 'Регистрация',
-      isLoginPage: true,
-      error: 'ФИО: только русские буквы, пробел и дефис'
-    });
-  }
+	if (!rxName.test(name) || !rxName.test(surname) || (patronymic && !rxName.test(patronymic))) {
+		return res.render('auth/register', { title: 'Регистрация', isLoginPage: true, error: 'ФИО: русские буквы, пробел и дефис' });
+	}
 
-  // 3) телефон (у тебя он может быть NULL)
-  if (phone && !rxPhone.test(phone)) {
-    return res.render('auth/register', {
-      title: 'Регистрация',
-      isLoginPage: true,
-      error: 'Телефон: формат +7XXXXXXXXXX'
-    });
-  }
+	if (phone && !rxPhone.test(phone)) {
+		return res.render('auth/register', { title: 'Регистрация', isLoginPage: true, error: 'Телефон: формат +7XXXXXXXXXX' });
+	}
 
-  // 4) логин
-  if (!rxLogin.test(login)) {
-    return res.render('auth/register', {
-      title: 'Регистрация',
-      isLoginPage: true,
-      error: 'Логин: 3–20 символов (латиница, цифры, _)'
-    });
-  }
+	if (!rxLogin.test(login)) {
+		return res.render('auth/register', { title: 'Регистрация', isLoginPage: true, error: 'Логин: 3–20 (латиница, цифры, _)' });
+	}
 
-  // 5) пароль
-  if (password.length < 4 || password.length > 50) {
-    return res.render('auth/register', {
-      title: 'Регистрация',
-      isLoginPage: true,
-      error: 'Пароль: 4–50 символов'
-    });
-  }
+	if (!rxEmail.test(email) || email.length > 255) {
+		return res.render('auth/register', { title: 'Регистрация', isLoginPage: true, error: 'Email указан неверно' });
+	}
 
-  if (password !== password2) {
-    return res.render('auth/register', {
-      title: 'Регистрация',
-      isLoginPage: true,
-      error: 'Пароли не совпадают'
-    });
-  }
+	if (password.length < 4 || password.length > 50) {
+		return res.render('auth/register', { title: 'Регистрация', isLoginPage: true, error: 'Пароль: 4–50 символов' });
+	}
 
-  // 6) проверка уникальности логина
-  const exists = await getUserByLogin(login);
-  if (exists) {
-    return res.render('auth/register', {
-      title: 'Регистрация',
-      isLoginPage: true,
-      error: 'Логин уже занят'
-    });
-  }
+	if (password !== password2) {
+		return res.render('auth/register', { title: 'Регистрация', isLoginPage: true, error: 'Пароли не совпадают' });
+	}
 
-  if (!email || !rxEmail.test(email) || email.length > 255) {
-  return res.render('auth/register', {
-    title: 'Регистрация',
-    isLoginPage: true,
-    error: 'Email указан неверно'
-  });
-}
+	const loginExists = await getUserByLogin(login);
+	if (loginExists) {
+		return res.render('auth/register', { title: 'Регистрация', isLoginPage: true, error: 'Логин уже занят' });
+	}
 
-const emailExists = await getUserByEmail(email);
-if (emailExists) {
-  return res.render('auth/register', {
-    title: 'Регистрация',
-    isLoginPage: true,
-    error: 'Email уже используется'
-  });
-}
+	const emailExists = await getUserByEmail(email);
+	if (emailExists) {
+		return res.render('auth/register', { title: 'Регистрация', isLoginPage: true, error: 'Email уже используется' });
+	}
 
+	const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
-  // 7) хэширование
-  const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+	const userId = await insertUser({
+		name,
+		surname,
+		patronymic: patronymic || null,
+		phone: phone || null,
+		login,
+		email,
+		password: passwordHash,
+	});
 
-  // 8) запись в БД
-  const userId = await insertUser({
-    name,
-    surname,
-    patronymic,
-    phone,
-    login,
-    email,
-    password: passwordHash
-  });
+	// авто-логин через DB-сессию
+	const { selector, validator, cookieValue } = makeSessionToken();
+	const tokenHash = await bcrypt.hash(validator, SALT_ROUNDS);
 
-  // 9) автологин: session + cookie
-  req.session.user = {
-    id: userId,
-    name,
-    surname,
-    patronymic,
-    phone,
-    role: 'user'
+	const expiresAt = new Date();
+	expiresAt.setDate(expiresAt.getDate() + 1);
 
+	await createDbSession({
+		userId,
+		selector,
+		tokenHash,
+		expiresAt,
+		ip: req.ip,
+		userAgent: req.get('user-agent') || null,
+	});
 
-  };
+	res.cookie('auth_token', cookieValue, authCookieOptions(1000 * 60 * 60 * 24));
 
-  res.cookie('user_id', userId, { httpOnly: true, maxAge: 1000 * 60 * 60 * 24 });
-  res.cookie('user_role', 'user', { httpOnly: true, maxAge: 1000 * 60 * 60 * 24 });
-
-  return res.redirect('/orders/my');
-});
-
-
-app.get('/register', (_req, res) => {
-  res.render('auth/register', { title: 'Регистрация', isLoginPage: true });
+	return res.redirect('/orders/my');
 });
 
 
 
-app.get('/orders/my', isAuth, async (req, res) => {
-  const filter = req.query.status || '';          // '' = «Все заказы»
-    let orders = await getOrdersByUser(
-    req.session.user.id,
-    filter ? filter : null
-  );
+// ---------- orders: user ----------
+app.get('/orders/my', requireAuth, async (req, res) => {
+	const filter = req.query.status || '';
+	let orders = await getOrdersByUser(req.user.id, filter ? filter : null);
 
-  /* по умолчанию скрываем «Отменено» и «Получено» */
-  if (!filter) {
-    orders = orders.filter(o =>
-      o.status !== 'Отменено' && o.status !== 'Получено'
-    );
-  }
+	if (!filter) {
+		orders = orders.filter((o) => o.status !== 'Отменено' && o.status !== 'Получено');
+	}
 
-  res.render('myOrders', {
-    title: 'Мои заказы',
-    orders,
-    filter,
-    isOrdersPage: true
-  });
+	return res.render('myOrders', {
+		title: 'Мои заказы',
+		orders,
+		filter,
+		isOrdersPage: true,
+	});
 });
 
-app.get('/orders/my-archive', isAuth, async (req, res) => {
-  const orders = await getArchiveOrdersByUser(req.session.user.id);
-
-  res.render('myArchive', {
-    title: 'Архив заказов',
-    isOrdersPage: true,
-    orders
-  });
+app.get('/orders/my-archive', requireAuth, async (req, res) => {
+	const orders = await getArchiveOrdersByUser(req.user.id);
+	return res.render('myArchive', {
+		title: 'Архив заказов',
+		isOrdersPage: true,
+		orders,
+	});
 });
 
+app.get('/orders/new', requireAuth, (_req, res) => {
+	const today = new Date().toISOString().slice(0, 10);
+	const fullName = `${_req.user.surname} ${_req.user.name} ${_req.user.patronymic || ''}`.trim();
 
-app.get('/orders/new', isAuth, (_req, res) => {
-  const today = new Date().toISOString().slice(0, 10);   // YYYY-MM-DD
-  const fullName = `${_req.session.user.surname} ${_req.session.user.name} ${_req.session.user.patronymic}`.trim();
+	return res.render('newOrder', {
+		title: 'Новый заказ',
+		isOrdersPage: true,
+		today,
+		fullName,
+		userPhone: _req.user.phone || '',
+	});
+});
 
-  res.render('newOrder', { 
-  title: 'Новый заказ',
-  isOrdersPage: true,
-  today,
-  fullName,
-  userPhone: _req.session.user.phone  
-    });
+app.post('/orders/new', requireAuth, async (req, res) => {
+	const rxFio = /^[А-Яа-яЁё\s\-]{5,60}$/;
+	const rxPhone = /^\+7\d{10}$/;
+
+	const { customer_name, customer_phone, product_name, quantity, unit_price, product_link, delivery_date, user_comment } = req.body;
+
+	if (!product_name || product_name.length < 1 || product_name.length > 255) {
+		return res.status(400).send('Название товара: от 1 до 255 символов');
+	}
+
+	const qty = Number(quantity);
+	if (!Number.isInteger(qty) || qty < 1 || qty > 10000) {
+		return res.status(400).send('Количество: целое число от 1 до 10000');
+	}
+
+	if (product_link && String(product_link).length > 32767) {
+		return res.status(400).send('Ссылка на товар: не более 32767 символов');
+	}
+
+	const price = Number(unit_price);
+	if (Number.isNaN(price) || price < 1 || price > 100_000_000) {
+		return res.status(400).send('Цена: от 1 до 100 000 000');
+	}
+
+	if (!rxFio.test(String(customer_name || ''))) {
+		return res.status(400).send('ФИО: только русские буквы, пробелы и дефис');
+	}
+
+	if (!rxPhone.test(String(customer_phone || ''))) {
+		return res.status(400).send('Телефон: формат +7XXXXXXXXXX');
+	}
+
+	 if (user_comment && String(user_comment).length > 500) {
+    return res.status(400).send('Комментарий: максимум 500 символов');
+  }
+
+  await insertOrder({
+    ...req.body,
+    user_id: req.user.id,
+    user_comment: user_comment || null
   });
 
-app.post('/orders/new', isAuth, async (req, res) => {
-  const rxFio = /^[А-Яа-яЁё\s\-]{5,60}$/;
-  const rxPhone = /^\+7\d{10}$/;
-  const {
-    customer_name,
-    customer_phone,
-    product_name,
-    quantity,
-    unit_price,
-    product_link,
-    delivery_date
-  } = req.body;
-
-  if (!product_name || product_name.length < 1 || product_name.length > 255) {
-    return res.status(400).send('Название товара: от 1 до 255 символов');
-  }
-  
-  const qty = Number(quantity);
-  if (!Number.isInteger(qty) || qty < 1 || qty > 10000) {
-    return res.status(400).send('Количество: целое число от 1 до 10000');
-  }
-
-  if (product_link && product_link.length > 32767) {
-    return res.status(400).send('Ссылка на товар: не более 32767 символов');
-  }
-
-  const price = Number(unit_price);
-  if (isNaN(price) || price < 1 || price > 100_000_000) {
-    return res.status(400).send('Цена: от 1 до 100 000 000');
-  }
-
-  if (!rxFio.test(req.body.customer_name)) {
-    return res.status(400).send('ФИО должно содержать только русские буквы, пробелы и дефис.');
-  }
-
-  if (!rxPhone.test(req.body.customer_phone)) {
-  return res.status(400).send('Телефон: только цифры, 10-15 символов.');
-  }
-
-  await insertOrder({ ...req.body, user_id: req.session.user.id });
   res.redirect('/orders/my');
 });
 
-app.post('/orders/edit/:id', isAuth, async (req, res) => {
-  await editOrderByUser(req.session.user.id, req.params.id, req.body);
-  res.redirect('/orders/my');
+app.get('/orders/edit/:id', requireAuth, async (req, res) => {
+	const order = await getOrderByIdAndUser(req.params.id, req.user.id);
+	if (!order || order.status !== 'На рассмотрении') return res.redirect('/orders/my');
+	return res.render('editOrder', { title: 'Редактировать заказ', order });
 });
 
-/* пользователь отменяет свой заказ, если тот ещё "На рассмотрении" */
-app.post('/orders/cancel/:id', isAuth, async (req, res) => {
-  const order = await getOrderByIdAndUser(req.params.id, req.session.user.id);
-
-  /* если заказа нет или его уже начали обрабатывать – просто назад */
-  if (!order || order.status !== 'На рассмотрении')
-    return res.redirect('/orders/my');
-
-  await updateOrderStatus(req.params.id, 'Отменено');
-  res.redirect('/orders/my');
+app.post('/orders/edit/:id', requireAuth, async (req, res) => {
+	await editOrderByUser(req.user.id, req.params.id, req.body);
+	return res.redirect('/orders/my');
 });
 
-app.post('/orders/update-user/:id', isAuth, async (req, res) => {
-  const { product_link, delivery_date } = req.body;
-  await updateOrderLinkAndDate(
-    req.params.id,
-    req.session.user.id,
-    product_link,
-    delivery_date
-  );
-  res.redirect('/orders/my');
+app.post('/orders/update-user/:id', requireAuth, async (req, res) => {
+	const { product_link, delivery_date } = req.body;
+	await updateOrderLinkAndDate(req.params.id, req.user.id, product_link, delivery_date);
+	return res.redirect('/orders/my');
 });
 
-app.get('/orders/update-status/:id', isAuth, isAdmin, (req, res) => {
-  res.redirect('/orders/active');
+app.post('/orders/cancel/:id', requireAuth, async (req, res) => {
+	const order = await getOrderByIdAndUser(req.params.id, req.user.id);
+	if (!order || order.status !== 'На рассмотрении') return res.redirect('/orders/my');
+	await updateOrderStatus(req.params.id, 'Отменено');
+	return res.redirect('/orders/my');
 });
 
-// app.js
-app.get('/orders/active', isAuth, isAdmin, async (req, res) => {
-  const loginFilter = req.query.login?.trim() || null;
-  const orders = await getActiveOrders(loginFilter);
-  res.render('activeOrders', {
-    title: 'Активные заказы',
-    isOrdersPage: true,
-    orders,
-    loginFilter
-  });
+// ---------- orders: admin ----------
+app.get('/orders/active', requireAuth, requireAdmin, async (req, res) => {
+	const loginFilter = req.query.login?.trim() || null;
+	const orders = await getActiveOrders(loginFilter);
+
+	return res.render('activeOrders', {
+		title: 'Активные заказы',
+		isOrdersPage: true,
+		orders,
+		loginFilter,
+	});
 });
 
+app.post('/orders/admin-action/:id', requireAuth, requireAdmin, async (req, res) => {
+  const oid = Number(req.params.id);
 
-app.get('/orders/archive', isAuth, isAdmin, async (_req, res) =>
-  res.render('archive', { title: 'Архив заказов',isOrdersPage: true, orders: await getArchiveOrders() })
-);
+  const status = String(req.body.status || '').trim();
+  const adminComment = String(req.body.admin_comment || '').trim();
 
-app.post('/orders/update-status/:id', isAuth, isAdmin, async (req, res) => {
-  const { status } = req.body;
-
-  const allowed = [
-    'На рассмотрении','Закупаем','Ждём поставку',
-    'Готов к получению','Пауза','Получено','Отменено'
-  ];
-  if (!allowed.includes(status))
-    return res.status(400).send('Bad status');
-
-  await updateOrderStatus(req.params.id, status);
-
-  // /* === ключ: отправляем на нужную страницу === */
-  // if (status === 'Получено' || status === 'Отменено') {
-  //   return res.redirect('/orders/archive');
-  // }
-  res.redirect('/orders/active');
-});
-
-app.post('/orders/update-eta/:id', isAuth, isAdmin, async (req, res) => {
-  await updateOrderETA(req.params.id, req.body.delivery_date);
-  res.redirect('/orders/active');
-});
-
-app.get('/orders/edit/:id', isAuth, async (req, res) => {
-  const order = await getOrderByIdAndUser(req.params.id, req.session.user.id);
-
-  
-  if (!order || order.status !== 'На рассмотрении')
-    return res.redirect('/orders/my');
-
-  res.render('editOrder', { title: 'Редактировать заказ', order });
-});
-
-app.get('/admin/users', isAuth, isAdmin, async (req, res) => {
-  const loginFilter = req.query.login?.trim() || null;
-  const users = await getAllUsers(loginFilter);
-  res.render('adminUsers', {
-    title: 'БД пользователей',
-    users,
-    loginFilter,
-    isOrdersPage: true
-  });
-});
-
-// Изменить пароль
-app.post('/admin/users/:id/password', isAuth, isAdmin, async (req, res) => {
-  const { password } = req.body;
-  await updateUserPassword(req.params.id, password);
-  res.redirect('/admin/users');
-});
-
-// Удалить пользователя
-app.post('/admin/users/:id/delete', isAuth, isAdmin, async (req, res) => {
-  await deleteUser(req.params.id);
-  res.redirect('/admin/users');
-});
-
-app.post('/orders/update-admin/:id', isAuth, isAdmin, async (req, res) => {
-  const { product_link, delivery_date, unit_price } = req.body;
-  const todayTs = new Date().setHours(0,0,0,0);
-  if (new Date(delivery_date).getTime() < todayTs) {
-    return res.status(400).send('Дата доставки не может быть в прошлом');
-  }
-  if (Number(unit_price) < 0) {
-    return res.status(400).send('Цена не может быть отрицательной');
+  if (!allowedStatuses.includes(status)) {
+    return res.status(400).send(`Bad status: "${status}"`);
   }
 
-  await updateOrderAdmin (
-    req.params.id,
-    product_link,
-    delivery_date,
-    unit_price
-  );
-  res.redirect('/orders/active');
-});
-
-app.post('/admin/users/:id/ban', isAuth, isAdmin, async (req, res) => {
-  const userId = Number(req.params.id);
-  const adminId = req.session.user.id;
-
-  const reason = (req.body.reason || '').trim();
-  const duration = (req.body.duration || 'permanent').trim(); // permanent | 1 | 7 | 30 ...
-
-  if (!reason || reason.length > 500) {
-    return res.status(400).send('Причина бана: 1–500 символов');
+  if (adminComment.length > 500) {
+    return res.status(400).send('Комментарий: максимум 500 символов');
   }
 
-  let bannedUntil = null;
-  if (duration !== 'permanent') {
-    const days = Number(duration);
-    if (!Number.isInteger(days) || days < 1 || days > 3650) {
-      return res.status(400).send('Некорректный срок бана');
-    }
-    const d = new Date();
-    d.setDate(d.getDate() + days);
-    bannedUntil = d;
-  }
-
-  await banUser(userId, adminId, reason, bannedUntil);
-  res.redirect('/admin/users');
+  await updateOrderAdminAction(oid, status, adminComment);
+  return res.redirect('/orders/active');
 });
 
-app.post('/admin/users/:id/unban', isAuth, isAdmin, async (req, res) => {
-  await unbanUser(req.params.id);
-  res.redirect('/admin/users');
+
+
+app.get('/orders/archive', requireAuth, requireAdmin, async (_req, res) => {
+	const orders = await getArchiveOrders();
+	return res.render('archive', {
+		title: 'Архив заказов',
+		isOrdersPage: true,
+		orders,
+	});
 });
 
-// ===== Mail.ru OAuth =====
+app.post('/orders/update-status/:id', requireAuth, requireAdmin, async (req, res) => {
+	const { status } = req.body;
+	if (!allowedStatuses.includes(status)) return res.status(400).send('Bad status');
+	await updateOrderStatus(req.params.id, status);
+	return res.redirect('/orders/active');
+});
+
+app.post('/orders/update-eta/:id', requireAuth, requireAdmin, async (req, res) => {
+	await updateOrderETA(req.params.id, req.body.delivery_date);
+	return res.redirect('/orders/active');
+});
+
+app.post('/orders/update-admin/:id', requireAuth, requireAdmin, async (req, res) => {
+	const { product_link, delivery_date, unit_price } = req.body;
+	const todayTs = new Date().setHours(0, 0, 0, 0);
+
+	if (new Date(delivery_date).getTime() < todayTs) {
+		return res.status(400).send('Дата доставки не может быть в прошлом');
+	}
+	if (Number(unit_price) < 0) {
+		return res.status(400).send('Цена не может быть отрицательной');
+	}
+
+	await updateOrderAdmin(req.params.id, product_link, delivery_date, unit_price);
+	return res.redirect('/orders/active');
+});
+
+// ---------- admin: users ----------
+app.get('/admin/users', requireAuth, requireAdmin, async (req, res) => {
+	const loginFilter = req.query.login?.trim() || null;
+	const users = await getAllUsers(loginFilter);
+
+	return res.render('adminUsers', {
+		title: 'БД пользователей',
+		users,
+		loginFilter,
+		isOrdersPage: true,
+	});
+});
+
+app.post('/admin/users/:id/password', requireAuth, requireAdmin, async (req, res) => {
+	const { password } = req.body;
+	// если updateUserPassword ожидает уже hash — захешируй тут:
+	const hash = await bcrypt.hash(String(password), SALT_ROUNDS);
+	await updateUserPassword(req.params.id, hash);
+	return res.redirect('/admin/users');
+});
+
+app.post('/admin/users/:id/delete', requireAuth, requireAdmin, async (req, res) => {
+	await deleteUser(req.params.id);
+	return res.redirect('/admin/users');
+});
+
+// ban/unban
+app.post('/admin/users/:id/ban', requireAuth, requireAdmin, async (req, res) => {
+	const userId = Number(req.params.id);
+	const adminId = req.user.id;
+
+	const reason = String(req.body.reason || '').trim();
+	const duration = String(req.body.duration || 'permanent').trim(); // permanent | 1 | 7 | 30 ...
+
+	if (!reason || reason.length > 500) return res.status(400).send('Причина бана: 1–500 символов');
+
+	let bannedUntil = null;
+	if (duration !== 'permanent') {
+		const days = Number(duration);
+		if (!Number.isInteger(days) || days < 1 || days > 3650) return res.status(400).send('Некорректный срок бана');
+		const d = new Date();
+		d.setDate(d.getDate() + days);
+		bannedUntil = d;
+	}
+
+	await banUser(userId, adminId, reason, bannedUntil);
+	return res.redirect('/admin/users');
+});
+
+app.post('/admin/users/:id/unban', requireAuth, requireAdmin, async (req, res) => {
+	await unbanUser(req.params.id);
+	return res.redirect('/admin/users');
+});
+
+// ---------- Mail.ru OAuth ----------
+// ENV:
+// MAILRU_CLIENT_ID=...
+// MAILRU_CLIENT_SECRET=...
+// MAILRU_REDIRECT_URI=http://localhost:3000/auth/mailru/callback
+
 app.get('/auth/mailru', (req, res) => {
-  console.log('MAILRU_REDIRECT_URI:', process.env.MAILRU_REDIRECT_URI);
-  const state = crypto.randomBytes(16).toString('hex');
-  req.session.mailru_oauth_state = state;
+	const state = crypto.randomBytes(16).toString('hex');
+	res.cookie('mailru_state', state, authCookieOptions(10 * 60 * 1000)); // 10 минут
 
-  const redirectUri = process.env.MAILRU_REDIRECT_URI;
-  const clientId = process.env.MAILRU_CLIENT_ID;
+	const redirectUri = process.env.MAILRU_REDIRECT_URI;
+	const clientId = process.env.MAILRU_CLIENT_ID;
 
-  const url =
-    `https://o2.mail.ru/login` +
-    `?response_type=code` +
-    `&client_id=${encodeURIComponent(clientId)}` +
-    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-    `&scope=${encodeURIComponent('userinfo')}` +
-    `&state=${encodeURIComponent(state)}`;
+	const url =
+		`https://o2.mail.ru/login` +
+		`?response_type=code` +
+		`&client_id=${encodeURIComponent(clientId)}` +
+		`&redirect_uri=${encodeURIComponent(redirectUri)}` +
+		`&scope=${encodeURIComponent('userinfo')}` +
+		`&state=${encodeURIComponent(state)}`;
 
-  return res.redirect(url);
+	return res.redirect(url);
 });
 
 app.get('/auth/mailru/callback', async (req, res) => {
-  try {
-    const { code, state, error } = req.query;
+	try {
+		const { code, state, error } = req.query;
 
-    if (error) return res.redirect('/login');
+		if (error) return res.redirect('/login');
 
-    // проверяем state (защита от CSRF)
-    if (!state || state !== req.session.mailru_oauth_state) {
-      return res.status(400).send('Bad state');
-    }
-    req.session.mailru_oauth_state = null;
+		const expectedState = req.cookies?.mailru_state;
+		if (!state || !expectedState || String(state) !== String(expectedState)) {
+			return res.status(400).send('Bad state');
+		}
+		res.clearCookie('mailru_state');
 
-    if (!code) return res.status(400).send('No code');
+		if (!code) return res.status(400).send('No code');
 
-    // 1) меняем code на access_token
-    const tokenResp = await axios.post(
-  'https://o2.mail.ru/token',
-  new URLSearchParams({
-    grant_type: 'authorization_code',
-    code: String(code),
-    redirect_uri: process.env.MAILRU_REDIRECT_URI,
-    client_id: process.env.MAILRU_CLIENT_ID,
-    client_secret: process.env.MAILRU_CLIENT_SECRET,
-  }).toString(),
-  {
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    }
-  }
-);
+		// 1) code -> access_token
+		const tokenResp = await axios.post(
+			'https://o2.mail.ru/token',
+			new URLSearchParams({
+				grant_type: 'authorization_code',
+				code: String(code),
+				redirect_uri: process.env.MAILRU_REDIRECT_URI,
+				client_id: process.env.MAILRU_CLIENT_ID,
+				client_secret: process.env.MAILRU_CLIENT_SECRET,
+			}).toString(),
+			{ headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 10000 }
+		);
 
+		const accessToken = tokenResp.data?.access_token;
+		if (!accessToken) return res.redirect('/login');
 
-    const accessToken = tokenResp.data?.access_token;
-    console.log('MAILRU TOKEN RESP:', tokenResp.data);
-    if (!accessToken) return res.status(400).send('No access_token');
+		// 2) userinfo
+		const userInfoResp = await axios.get('https://o2.mail.ru/userinfo', {
+			params: {
+				access_token: accessToken,
+				client_id: process.env.MAILRU_CLIENT_ID,
+			},
+			headers: {
+				Authorization: `Bearer ${accessToken}`,
+				Accept: 'application/json',
+			},
+			timeout: 10000,
+			validateStatus: () => true,
+		});
 
-    const userInfoResp = await axios.get('https://o2.mail.ru/userinfo', {
-    params: {
-      access_token: accessToken,
-      client_id: process.env.MAILRU_CLIENT_ID,
-    },
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      Accept: 'application/json',
-    },
-    timeout: 10000,
-    validateStatus: () => true,
-  });
+		if (userInfoResp.status !== 200) {
+			console.error('MAILRU USERINFO FAIL:', userInfoResp.status, userInfoResp.data);
+			return res.redirect('/login');
+		}
 
-  console.log('MAILRU USERINFO STATUS:', userInfoResp.status);
-  console.log('MAILRU USERINFO DATA:', userInfoResp.data);
+		const info = userInfoResp.data || {};
+		const email = info.email;
+		if (!email) return res.status(400).send('Mail.ru не вернул email');
 
-  if (userInfoResp.status !== 200) {
-    return res.redirect('/login?error=mailru_userinfo_failed');
-  }
+		// 3) ищем пользователя по email
+		let user = await getUserByEmail(email);
 
-  const info = userInfoResp.data || {};
+		// 4) если нет — создаём
+		if (!user) {
+			const fullName = String(info.name || '').trim();
+			const firstName = String(info.first_name || '').trim();
+			const lastName = String(info.last_name || '').trim();
 
+			const name = firstName || (fullName.split(' ')[1] || fullName.split(' ')[0] || 'Пользователь');
+			const surname = lastName || (fullName.split(' ')[0] || 'MailRu');
 
-    const email = info.email;
-    if (!email) return res.status(400).send('Mail.ru не вернул email');
+			await insertOAuthUserFromMailru({
+				email,
+				name,
+				surname,
+				patronymic: null,
+				phone: null,
+			});
 
-    // ✅ ИЩЕМ ПО EMAIL
-    let user = await getUserByEmail(email);
+			user = await getUserByEmail(email);
+			if (!user) return res.redirect('/login');
+		}
 
-    // ✅ ЕСЛИ НЕТ — СОЗДАЁМ
-    if (!user) {
-      const fullName = String(info.name || '').trim();
-      const firstName = String(info.first_name || '').trim();
-      const lastName = String(info.last_name || '').trim();
+		// 5) проверка бана
+		const ban = await getActiveBanByUserId(user.id);
+		if (ban) {
+			const untilText = ban.banned_until ? `до ${new Date(ban.banned_until).toLocaleString('ru-RU')}` : 'навсегда';
+			return res.render('auth/login', {
+				title: 'Вход',
+				isLoginPage: true,
+				error: `Аккаунт заблокирован ${untilText}. Причина: ${ban.reason}`,
+			});
+		}
 
-      const name =
-        firstName ||
-        (fullName.split(' ')[1] || fullName.split(' ')[0] || 'Пользователь');
+		// 6) создаём DB-сессию и кладём auth_token
+		const { selector, validator, cookieValue } = makeSessionToken();
+		const tokenHash = await bcrypt.hash(validator, SALT_ROUNDS);
 
-      const surname =
-        lastName ||
-        (fullName.split(' ')[0] || 'MailRu');
+		const expiresAt = new Date();
+		expiresAt.setDate(expiresAt.getDate() + 1);
 
-      await insertOAuthUserFromMailru({
-        email,
-        name,
-        surname
-      });
+		await createDbSession({
+			userId: user.id,
+			selector,
+			tokenHash,
+			expiresAt,
+			ip: req.ip,
+			userAgent: req.get('user-agent') || null,
+		});
 
-      // получаем созданного пользователя
-      user = await getUserByEmail(email);
-    }
+		res.cookie('auth_token', cookieValue, authCookieOptions(1000 * 60 * 60 * 24));
 
-    // 5) логиним в твою сессию как обычно
-    req.session.user = {
-      id: user.id,
-      name: user.name,
-      surname: user.surname,
-      patronymic: user.patronymic,
-      phone: user.phone,
-      role: user.role,
-    };
-
-    // 6) редирект по роли
-    return res.redirect(user.role === 'admin' ? '/orders/active' : '/orders/my');
-  } catch (e) {
-    console.error(e);
-    return res.redirect('/login');
-  }
+		return res.redirect(user.role === 'admin' ? '/orders/active' : '/orders/my');
+	} catch (e) {
+		console.error('MAILRU CALLBACK ERROR:', e);
+		return res.redirect('/login');
+	}
 });
 
-
+// ---------- start ----------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`http://localhost:${PORT}`));
-
-/*
-PORT=3000
-DB_PORT=3407
-DB_HOST=platon.teyhd.ru
-DB_USER=student
-DB_PASS=studpass
-DB_NAME=Nikita_todo
-DB_CHARSET=utf8mb4_0900_ai_ci
-
-MAILRU_CLIENT_ID=019b28b8cc9973a9b641f63f0e12491f
-MAILRU_CLIENT_SECRET=019b28b8cc9973b4952bf827e9bdff58
-MAILRU_REDIRECT_URI=http://localhost:3000/auth/mailru/callback
-*/

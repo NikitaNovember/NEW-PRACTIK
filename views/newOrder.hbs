@@ -60,6 +60,17 @@
         min="{{today}}">
     </label>
 
+    <label>
+      Комментарий к заказу
+      <textarea
+        name="user_comment"
+        rows="3"
+        maxlength="500"
+        placeholder="Например: цвет, размер, пожелания, что важно учесть..."
+      ></textarea>
+    </label>
+
+
     <div class="form-actions" style="display:flex; gap:1rem; margin-top:1.5rem;">
       <button type="submit" class="btn-submit">Отправить</button>
       <a href="/orders/my"

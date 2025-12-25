@@ -327,3 +327,47 @@
     align-self: flex-end;
   }
 }
+
+/* комментарий пользователя в форме */
+.order-form textarea{
+  padding: .55rem .75rem;
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: var(--text);
+  resize: vertical;
+}
+.order-form textarea:focus{
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* колонка комментариев в таблице */
+.comment-col{
+  max-width: 260px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* форма комментария админа */
+.comment-form{
+  display:flex;
+  align-items:center;
+  gap:.4rem;
+}
+.comment-form input{
+  width: 220px;
+  background:#232321;
+  color:var(--text);
+  border:1px solid #292929;
+  border-radius:4px;
+  padding:.35rem .55rem;
+}
+.comment-form input:focus{
+  outline:none;
+  border-color:var(--accent);
+}
+.comment-form .btn-sec{
+  width:auto !important;
+  padding:.35rem .7rem;
+}

@@ -69,31 +69,71 @@ export async function updateOrderETA(id, eta){
 }
 
 export async function insertOrder(o) {
-  const sql = `
-    INSERT INTO orders
-    (customer_name, customer_phone, product_name, quantity,
-     unit_price, product_link, delivery_date, status, user_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'На рассмотрении', ?)
-  `;
-  const p = [o.customer_name, o.customer_phone, o.product_name, o.quantity,
-             o.unit_price, o.product_link, o.delivery_date, o.user_id];
-  const [r] = await pool.query(sql, p);
-  return r.insertId;
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [r] = await conn.query(
+      `INSERT INTO orders
+        (customer_name, customer_phone, product_name, quantity,
+         unit_price, product_link, delivery_date, status, user_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'На рассмотрении', ?)`,
+      [
+        o.customer_name,
+        o.customer_phone,
+        o.product_name,
+        o.quantity,
+        o.unit_price,
+        o.product_link,
+        o.delivery_date,
+        o.user_id,
+      ]
+    );
+
+    const orderId = r.insertId;
+
+    const userComment = (o.user_comment ?? '').toString().trim();
+    if (userComment.length) {
+      await conn.query(
+        `INSERT INTO order_comments (order_id, user_comment, admin_comment)
+         VALUES (?, ?, NULL)
+         ON DUPLICATE KEY UPDATE user_comment = VALUES(user_comment)`,
+        [orderId, userComment.slice(0, 500)]
+      );
+    }
+
+    await conn.commit();
+    return orderId;
+  } catch (e) {
+    await conn.rollback();
+    throw e;
+  } finally {
+    conn.release();
+  }
 }
 
-export async function getOrdersByUser(uid, status = null) {
-  let  sql = 'SELECT * FROM orders WHERE user_id = ?';
-  const p  = [uid];
 
-  if (status) {                  // если нужна фильтрация
-    sql += ' AND status = ?';
+export async function getOrdersByUser(uid, status = null) {
+  let sql = `
+    SELECT o.*,
+           c.user_comment,
+           c.admin_comment
+    FROM orders o
+    LEFT JOIN order_comments c ON c.order_id = o.id
+    WHERE o.user_id = ?
+  `;
+  const p = [uid];
+
+  if (status) {
+    sql += ' AND o.status = ?';
     p.push(status);
   }
 
-  sql += ' ORDER BY created_at DESC';
-  const [r] = await pool.query(sql, p);
-  return r;
+  sql += ' ORDER BY o.created_at DESC';
+  const [rows] = await pool.query(sql, p);
+  return rows;
 }
+
 
 export async function editOrderByUser(uid, oid, data) {
   await pool.query(
@@ -116,13 +156,15 @@ export async function updateOrderLinkAndDate(oid, uid, link, date) {
 }
 
 
-// vendor/db.mjs
 export async function getActiveOrders(loginFilter = null) {
-  // если передан loginFilter, добавляем условие по users.login
   let sql = `
-    SELECT o.*, u.login AS user_login
+    SELECT o.*,
+           u.login AS user_login,
+           c.user_comment,
+           c.admin_comment
     FROM orders o
     JOIN users u ON o.user_id = u.id
+    LEFT JOIN order_comments c ON c.order_id = o.id
     WHERE o.status NOT IN ('Получено','Отменено')
   `;
   const params = [];
@@ -133,18 +175,23 @@ export async function getActiveOrders(loginFilter = null) {
   }
 
   sql += ` ORDER BY o.created_at DESC`;
-  const [r] = await pool.query(sql, params);
-  return r;
+  const [rows] = await pool.query(sql, params);
+  return rows;
 }
 
 
+
 export async function getArchiveOrders() {
-  const [r] = await pool.query(
-    "SELECT * FROM orders \
-     WHERE status IN ('Получено','Отменено') \
-     ORDER BY created_at DESC"
+  const [rows] = await pool.query(
+    `SELECT o.*,
+            c.user_comment,
+            c.admin_comment
+     FROM orders o
+     LEFT JOIN order_comments c ON c.order_id = o.id
+     WHERE o.status IN ('Получено','Отменено')
+     ORDER BY o.created_at DESC`
   );
-  return r;
+  return rows;
 }
 
 export async function updateOrderStatus(oid, status) {
@@ -246,15 +293,19 @@ export async function unbanUser(userId) {
 
 export async function getArchiveOrdersByUser(uid) {
   const [rows] = await pool.query(
-    `SELECT *
-     FROM orders
-     WHERE user_id = ?
-       AND status IN ('Получено', 'Отменено')
-     ORDER BY created_at DESC`,
+    `SELECT o.*,
+            c.user_comment,
+            c.admin_comment
+     FROM orders o
+     LEFT JOIN order_comments c ON c.order_id = o.id
+     WHERE o.user_id = ?
+       AND o.status IN ('Получено', 'Отменено')
+     ORDER BY o.created_at DESC`,
     [uid]
   );
   return rows;
 }
+
 
 
 
@@ -281,7 +332,67 @@ export async function getUserByEmail(email) {
   return r[0] ?? null;
 }
 
+export async function createDbSession({
+  userId,
+  selector,
+  tokenHash,
+  expiresAt,
+  ip,
+  userAgent
+}) {
+  await pool.query(
+    `INSERT INTO sessions (user_id, selector, token_hash, expires_at, ip, user_agent)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [userId, selector, tokenHash, expiresAt, ip || null, userAgent || null]
+  );
+}
+
+export async function getDbSessionBySelector(selector) {
+  const [r] = await pool.query(
+    `SELECT s.*, u.id AS uid, u.name, u.surname, u.patronymic, u.phone, u.role
+     FROM sessions s
+     JOIN users u ON u.id = s.user_id
+     WHERE s.selector = ? LIMIT 1`,
+    [selector]
+  );
+  return r[0] ?? null;
+}
+
+export async function revokeDbSession(selector) {
+  await pool.query(
+    `UPDATE sessions SET revoked_at = NOW() WHERE selector = ?`,
+    [selector]
+  );
+}
+
+export async function cleanupExpiredSessions() {
+  await pool.query(
+    `DELETE FROM sessions WHERE expires_at < NOW() OR revoked_at IS NOT NULL`
+  );
+}
 
 
+
+
+export async function updateOrderAdminAction(oid, status, adminComment) {
+  const safeStatus = String(status || '').trim();
+
+  const raw = (adminComment ?? '').toString().trim();
+  const safeComment = raw.length ? raw.slice(0, 500) : null;
+
+  // 1) сохранить/обновить комментарий админа
+  await pool.query(
+    `INSERT INTO order_comments (order_id, admin_comment)
+     VALUES (?, ?)
+     ON DUPLICATE KEY UPDATE admin_comment = VALUES(admin_comment)`,
+    [oid, safeComment]
+  );
+
+  // 2) обновить статус заказа
+  await pool.query(
+    `UPDATE orders SET status = ? WHERE id = ?`,
+    [safeStatus, oid]
+  );
+}
 
 

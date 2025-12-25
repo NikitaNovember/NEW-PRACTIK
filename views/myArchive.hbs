@@ -39,6 +39,13 @@
             <td>{{unit_price}}</td>
             <td>{{multiply unit_price quantity}}</td>
             <td>{{status}}</td>
+            <td class="comment-col">
+              {{#if this.user_comment}}{{this.user_comment}}{{else}}—{{/if}}
+            </td>
+            <td class="comment-col">
+              {{#if this.admin_comment}}{{this.admin_comment}}{{else}}—{{/if}}
+            </td>
+
           </tr>
         {{/each}}
 

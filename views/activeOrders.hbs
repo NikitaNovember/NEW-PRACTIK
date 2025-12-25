@@ -37,7 +37,10 @@
           <th>Создан</th>
           <th>Ожидается</th>
           <th>Статус</th>
+          <th>Комментарий пользователя</th>
           <th>Действие</th>
+          
+
         </tr>
       </thead>
       <tbody>
@@ -61,8 +64,20 @@
             <td>{{date created_at}}</td>
             <td>{{date delivery_date}}</td>
             <td>{{status}}</td>
+           <td class="comment-col">
+              {{#if this.user_comment}}{{this.user_comment}}{{else}}—{{/if}}
+            </td>
+
             <td class="action-cell">
-              <form action="/orders/update-status/{{id}}" method="post" class="action-form">
+              <form action="/orders/admin-action/{{id}}" method="post" class="action-form">
+                <input
+                  type="text"
+                  name="admin_comment"
+                  maxlength="500"
+                  placeholder="Комментарий админа..."
+                  value="{{this.admin_comment}}"
+                />
+
                 <select name="status">
                   <option value="На рассмотрении"   {{#eq status "На рассмотрении"}}selected{{/eq}}>На рассмотрении</option>
                   <option value="Закупаем"          {{#eq status "Закупаем"}}selected{{/eq}}>Закупаем</option>
@@ -72,7 +87,8 @@
                   <option value="Получено"          {{#eq status "Получено"}}selected{{/eq}}>Получено</option>
                   <option value="Отменено"          {{#eq status "Отменено"}}selected{{/eq}}>Отменено</option>
                 </select>
-                 <button type="button" class="btn-edit"
+
+                <button type="button" class="btn-edit"
                         onclick="openAdminEditModal(
                           {{id}},
                           '{{product_link}}',
@@ -81,10 +97,15 @@
                         )"
                         title="Правка цены/ссылки/даты">
                   <i class="fa-solid fa-pen"></i>
-                  </button>
+                </button>
+
                 <button type="submit" class="btn-sec">OK</button>
               </form>
             </td>
+
+            
+
+
           </tr>
         {{/each}}
       </tbody>
